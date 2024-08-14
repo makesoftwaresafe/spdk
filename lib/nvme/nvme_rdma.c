@@ -2317,6 +2317,16 @@ static void
 nvme_rdma_ctrlr_disconnect_qpair(struct spdk_nvme_ctrlr *ctrlr, struct spdk_nvme_qpair *qpair)
 {
 	int rc;
+	struct nvme_rdma_qpair *rqpair = nvme_rdma_qpair(qpair);
+	struct nvme_rdma_poll_group *group;
+
+	if (qpair->poll_group) {
+		group = nvme_rdma_poll_group(qpair->poll_group);
+
+		if (TAILQ_ENTRY_ENQUEUED(rqpair, link_connecting)) {
+			TAILQ_REMOVE_CLEAR(&group->connecting_qpairs, rqpair, link_connecting);
+		}
+	}
 
 	_nvme_rdma_ctrlr_disconnect_qpair(ctrlr, qpair, nvme_rdma_qpair_disconnected);
 
@@ -3427,13 +3437,6 @@ nvme_rdma_poll_group_connect_qpair(struct spdk_nvme_qpair *qpair)
 static int
 nvme_rdma_poll_group_disconnect_qpair(struct spdk_nvme_qpair *qpair)
 {
-	struct nvme_rdma_qpair *rqpair = nvme_rdma_qpair(qpair);
-	struct nvme_rdma_poll_group *group = nvme_rdma_poll_group(qpair->poll_group);
-
-	if (TAILQ_ENTRY_ENQUEUED(rqpair, link_connecting)) {
-		TAILQ_REMOVE_CLEAR(&group->connecting_qpairs, rqpair, link_connecting);
-	}
-
 	return 0;
 }
 
