@@ -15,6 +15,12 @@ equal to `NVMF_CTRLR_RESET_SHN_TIMEOUT_IN_MS` is used. The
 `nvmf_subsystem_remove_host` json-rpc methods also reflects to above behavior and
 allow to configure the timeout now.
 
+### nvme
+
+Removed the transport APIs poll_group_connect_qpair and poll_group_disconnet_qpair. None of the
+transports did anything inside of these functions, and we've simplified the model such that
+connections are only added or removed while disconnected.
+
 ## v26.01
 
 ### accel_ae4dma

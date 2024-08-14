@@ -1769,18 +1769,6 @@ nvme_pcie_poll_group_create(void)
 }
 
 int
-nvme_pcie_poll_group_connect_qpair(struct spdk_nvme_qpair *qpair)
-{
-	return 0;
-}
-
-int
-nvme_pcie_poll_group_disconnect_qpair(struct spdk_nvme_qpair *qpair)
-{
-	return 0;
-}
-
-int
 nvme_pcie_poll_group_add(struct spdk_nvme_transport_poll_group *tgroup,
 			 struct spdk_nvme_qpair *qpair)
 {

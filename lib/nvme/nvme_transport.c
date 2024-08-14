@@ -821,9 +821,6 @@ nvme_transport_poll_group_disconnect_qpair(struct spdk_nvme_qpair *qpair)
 	}
 
 	if (qpair->poll_group_tailq_head == &tgroup->connected_qpairs) {
-		rc = tgroup->transport->ops.poll_group_disconnect_qpair(qpair);
-		assert(rc == 0);
-
 		qpair->poll_group_tailq_head = &tgroup->disconnected_qpairs;
 		STAILQ_REMOVE(&tgroup->connected_qpairs, qpair, spdk_nvme_qpair, poll_group_stailq);
 		assert(tgroup->num_connected_qpairs > 0);
@@ -840,7 +837,6 @@ int
 nvme_transport_poll_group_connect_qpair(struct spdk_nvme_qpair *qpair)
 {
 	struct spdk_nvme_transport_poll_group *tgroup;
-	int rc;
 
 	tgroup = qpair->poll_group;
 
@@ -849,15 +845,12 @@ nvme_transport_poll_group_connect_qpair(struct spdk_nvme_qpair *qpair)
 	}
 
 	if (qpair->poll_group_tailq_head == &tgroup->disconnected_qpairs) {
-		rc = tgroup->transport->ops.poll_group_connect_qpair(qpair);
-		if (rc == 0) {
-			qpair->poll_group_tailq_head = &tgroup->connected_qpairs;
-			STAILQ_REMOVE(&tgroup->disconnected_qpairs, qpair, spdk_nvme_qpair, poll_group_stailq);
-			STAILQ_INSERT_TAIL(&tgroup->connected_qpairs, qpair, poll_group_stailq);
-			tgroup->num_connected_qpairs++;
-		}
+		qpair->poll_group_tailq_head = &tgroup->connected_qpairs;
+		STAILQ_REMOVE(&tgroup->disconnected_qpairs, qpair, spdk_nvme_qpair, poll_group_stailq);
+		STAILQ_INSERT_TAIL(&tgroup->connected_qpairs, qpair, poll_group_stailq);
+		tgroup->num_connected_qpairs++;
 
-		return rc == -EINPROGRESS ? 0 : rc;
+		return 0;
 	}
 
 
