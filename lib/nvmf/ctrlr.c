@@ -24,10 +24,6 @@
 #include "spdk/log.h"
 #include "spdk_internal/usdt.h"
 
-#define NVMF_CC_RESET_SHN_TIMEOUT_IN_MS	10000
-
-#define NVMF_CTRLR_RESET_SHN_TIMEOUT_IN_MS	(NVMF_CC_RESET_SHN_TIMEOUT_IN_MS + 5000)
-
 #define DUPLICATE_QID_RETRY_US 1000
 
 /*

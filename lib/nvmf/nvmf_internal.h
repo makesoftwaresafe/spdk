@@ -39,6 +39,9 @@
 #define __spdk_nonstring
 #endif
 
+#define NVMF_CC_RESET_SHN_TIMEOUT_IN_MS	10000
+#define NVMF_CTRLR_RESET_SHN_TIMEOUT_IN_MS	(NVMF_CC_RESET_SHN_TIMEOUT_IN_MS + 5000)
+
 enum spdk_nvmf_tgt_state {
 	NVMF_TGT_IDLE = 0,
 	NVMF_TGT_RUNNING,

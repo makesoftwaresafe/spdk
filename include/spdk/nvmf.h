@@ -817,13 +817,15 @@ int spdk_nvmf_subsystem_set_keys(struct spdk_nvmf_subsystem *subsystem, const ch
  * \param hostnqn The NQN for the host
  * \param cb_fn The function to call on completion.
  * \param cb_arg The argument to pass to the cb_fn.
+ * \param timeout_ms The time in milliseconds to wait for the asynchronous operations to complete,
+ * or 0 for default value derived from the controller CAP.TO.
  *
  * \return int. 0 when the asynchronous process starts successfully or a negated errno on failure.
  */
 int spdk_nvmf_subsystem_disconnect_host(struct spdk_nvmf_subsystem *subsystem,
 					const char *hostnqn,
 					spdk_nvmf_tgt_subsystem_listen_done_fn cb_fn,
-					void *cb_arg);
+					void *cb_arg, uint64_t timeout_ms);
 
 /**
  * Set whether a subsystem should allow any host or only hosts in the allowed list.

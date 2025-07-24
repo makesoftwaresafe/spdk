@@ -6,6 +6,13 @@
 
 Deprecated API spdk_nvmf_ctrlr_connect() was removed.
 
+The behavior of `spdk_nvmf_subsystem_disconnect_host` has been changed. Previously,
+the function could return a status before all queues were actually disconnected.
+In the current version, the function will invoke the callback only after all
+disconnect operations have completed or the provided timeout has been exceeded.
+If the function is called with the timeout set to 0, the default timeout value
+equal to `NVMF_CTRLR_RESET_SHN_TIMEOUT_IN_MS` is used.
+
 ## v26.01
 
 ### accel_ae4dma

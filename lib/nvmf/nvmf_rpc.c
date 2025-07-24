@@ -2142,7 +2142,7 @@ rpc_nvmf_subsystem_remove_host(struct spdk_jsonrpc_request *request,
 
 	rc = spdk_nvmf_subsystem_disconnect_host(subsystem, ctx->host,
 			rpc_nvmf_subsystem_remove_host_done,
-			ctx);
+			ctx, 0);
 	if (rc != 0) {
 		spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INTERNAL_ERROR, "Internal error");
 		nvmf_rpc_host_ctx_free(ctx);

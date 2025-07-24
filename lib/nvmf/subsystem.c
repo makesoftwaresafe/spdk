@@ -3,6 +3,7 @@
  *   Copyright (c) 2019 Mellanox Technologies LTD. All rights reserved.
  *   Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *   Copyright (c) 2025, Oracle and/or its affiliates.
+ *   Copyright (C) 2025 Dell Inc, or its subsidiaries. All rights reserved.
  */
 
 #include "spdk/stdinc.h"
@@ -1159,35 +1160,69 @@ spdk_nvmf_subsystem_set_keys(struct spdk_nvmf_subsystem *subsystem, const char *
 	return 0;
 }
 
+enum nvmf_subsystem_disconnect_mode {
+	NVMF_SUBSYSTEM_DISCONNECT_HOST_MODE_DISCONNECT = 0,
+	NVMF_SUBSYSTEM_DISCONNECT_HOST_MODE_COUNT_QPAIRS,
+};
+
 struct nvmf_subsystem_disconnect_host_ctx {
 	struct spdk_nvmf_subsystem		*subsystem;
 	char					*hostnqn;
 	spdk_nvmf_tgt_subsystem_listen_done_fn	cb_fn;
 	void					*cb_arg;
+	uint64_t				retry_timeout_tsc;
+	uint64_t				timeout_ms;
+	int					qpairs_count;
+	enum nvmf_subsystem_disconnect_mode	mode;
 };
 
+static void nvmf_subsystem_count_qpairs_by_host_msg(void *host_ctx);
+
 static void
-nvmf_subsystem_disconnect_host_fini(struct spdk_io_channel_iter *i, int status)
+nvmf_subsystem_count_qpairs_by_host_fini(struct spdk_io_channel_iter *i, int status)
 {
 	struct nvmf_subsystem_disconnect_host_ctx *ctx;
+	uint64_t now = 0;
+	int error = 0;
 
 	ctx = spdk_io_channel_iter_get_ctx(i);
 
+	if (status) {
+		error = status;
+		goto error;
+	}
+
+	if (ctx->qpairs_count != 0) {
+		now = spdk_get_ticks();
+		if (now < ctx->retry_timeout_tsc) {
+			/* Schedule a retry */
+			ctx->qpairs_count = 0;
+			spdk_thread_send_msg(spdk_get_thread(), nvmf_subsystem_count_qpairs_by_host_msg, ctx);
+			return;
+		} else {
+			SPDK_ERRLOG("Retry timeout = %lums reached, call callback with error\n",
+				    ctx->timeout_ms);
+			error = -ETIMEDOUT;
+		}
+	}
+
+error:
 	if (ctx->cb_fn) {
-		ctx->cb_fn(ctx->cb_arg, status);
+		ctx->cb_fn(ctx->cb_arg, error);
 	}
 	free(ctx->hostnqn);
 	free(ctx);
 }
 
 static void
-nvmf_subsystem_disconnect_qpairs_by_host(struct spdk_io_channel_iter *i)
+nvmf_subsystem_disconnect_host_for_each_qpair(struct spdk_io_channel_iter *i)
 {
 	struct nvmf_subsystem_disconnect_host_ctx *ctx;
 	struct spdk_nvmf_poll_group *group;
 	struct spdk_io_channel *ch;
 	struct spdk_nvmf_qpair *qpair, *tmp_qpair;
 	struct spdk_nvmf_ctrlr *ctrlr;
+	int status = 0, rc = 0;
 
 	ctx = spdk_io_channel_iter_get_ctx(i);
 	ch = spdk_io_channel_iter_get_channel(i);
@@ -1201,18 +1236,65 @@ nvmf_subsystem_disconnect_qpairs_by_host(struct spdk_io_channel_iter *i)
 		}
 
 		if (strncmp(ctrlr->hostnqn, ctx->hostnqn, sizeof(ctrlr->hostnqn)) == 0) {
-			/* Right now this does not wait for the queue pairs to actually disconnect. */
-			spdk_nvmf_qpair_disconnect(qpair);
+			if (ctx->mode == NVMF_SUBSYSTEM_DISCONNECT_HOST_MODE_DISCONNECT) {
+				/* Right now this does not wait for the queue pairs to actually disconnect. */
+				rc = spdk_nvmf_qpair_disconnect(qpair);
+				if (rc && (rc != -EINPROGRESS)) {
+					status = rc;
+				}
+			} else if (ctx->mode == NVMF_SUBSYSTEM_DISCONNECT_HOST_MODE_COUNT_QPAIRS) {
+				ctx->qpairs_count++;
+			}
 		}
 	}
-	spdk_for_each_channel_continue(i, 0);
+	spdk_for_each_channel_continue(i, status);
+}
+
+static void
+nvmf_subsystem_count_qpairs_by_host_msg(void *host_ctx)
+{
+	struct nvmf_subsystem_disconnect_host_ctx *ctx = host_ctx;
+
+	ctx->mode = NVMF_SUBSYSTEM_DISCONNECT_HOST_MODE_COUNT_QPAIRS;
+	spdk_for_each_channel(ctx->subsystem->tgt, nvmf_subsystem_disconnect_host_for_each_qpair, ctx,
+			      nvmf_subsystem_count_qpairs_by_host_fini);
+}
+
+static void
+nvmf_subsystem_disconnect_host_fini(struct spdk_io_channel_iter *i, int status)
+{
+	struct nvmf_subsystem_disconnect_host_ctx *ctx;
+	uint64_t timeout_ms = 0;
+
+	ctx = spdk_io_channel_iter_get_ctx(i);
+
+	if (status) {
+		if (ctx->cb_fn) {
+			ctx->cb_fn(ctx->cb_arg, status);
+		}
+		free(ctx->hostnqn);
+		free(ctx);
+		return;
+	}
+
+	/* If timeout was specified, use it, if not use the default */
+	if (ctx->timeout_ms != 0) {
+		timeout_ms = ctx->timeout_ms;
+	} else {
+		timeout_ms = NVMF_CTRLR_RESET_SHN_TIMEOUT_IN_MS;
+	}
+
+	ctx->retry_timeout_tsc = spdk_get_ticks() + timeout_ms * spdk_get_ticks_hz() / SPDK_SEC_TO_MSEC;
+	ctx->mode = NVMF_SUBSYSTEM_DISCONNECT_HOST_MODE_COUNT_QPAIRS;
+	spdk_for_each_channel(ctx->subsystem->tgt, nvmf_subsystem_disconnect_host_for_each_qpair, ctx,
+			      nvmf_subsystem_count_qpairs_by_host_fini);
 }
 
 int
 spdk_nvmf_subsystem_disconnect_host(struct spdk_nvmf_subsystem *subsystem,
 				    const char *hostnqn,
 				    spdk_nvmf_tgt_subsystem_listen_done_fn cb_fn,
-				    void *cb_arg)
+				    void *cb_arg, uint64_t timeout_ms)
 {
 	struct nvmf_subsystem_disconnect_host_ctx *ctx;
 
@@ -1230,8 +1312,10 @@ spdk_nvmf_subsystem_disconnect_host(struct spdk_nvmf_subsystem *subsystem,
 	ctx->subsystem = subsystem;
 	ctx->cb_fn = cb_fn;
 	ctx->cb_arg = cb_arg;
+	ctx->timeout_ms = timeout_ms;
+	ctx->mode = NVMF_SUBSYSTEM_DISCONNECT_HOST_MODE_DISCONNECT;
 
-	spdk_for_each_channel(subsystem->tgt, nvmf_subsystem_disconnect_qpairs_by_host, ctx,
+	spdk_for_each_channel(subsystem->tgt, nvmf_subsystem_disconnect_host_for_each_qpair, ctx,
 			      nvmf_subsystem_disconnect_host_fini);
 
 	return 0;
