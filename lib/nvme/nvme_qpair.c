@@ -2,6 +2,7 @@
  *   Copyright (C) 2015 Intel Corporation.
  *   All rights reserved.
  *   Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *   Copyright (c) 2025 Dell Inc. or its subsidiaries. All Rights Reserved
  */
 
 #include "nvme_internal.h"
@@ -954,6 +955,8 @@ nvme_qpair_init(struct spdk_nvme_qpair *qpair, uint16_t id,
 	qpair->fabric_poll_status = NULL;
 	qpair->num_outstanding_reqs = 0;
 
+	memset(&qpair->io_stats, 0, sizeof(qpair->io_stats));
+
 	qpair->poll_group = NULL;
 
 	STAILQ_INIT(&qpair->free_req);
@@ -1132,6 +1135,10 @@ _nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *r
 	}
 
 	if (spdk_likely(rc == 0)) {
+		if (qpair->collect_stats) {
+			qpair->io_stats.submission_count++;
+		}
+
 		if (SPDK_DEBUGLOG_FLAG_ENABLED("nvme")) {
 			spdk_nvme_qpair_print_command(qpair, &req->cmd);
 		}
