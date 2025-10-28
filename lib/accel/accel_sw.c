@@ -24,10 +24,9 @@
 #endif
 
 #ifdef SPDK_CONFIG_ISAL
-#include "../isa-l/include/igzip_lib.h"
+#include "spdk/isa-l.h"
 #ifdef SPDK_CONFIG_ISAL_CRYPTO
-#include "../isa-l-crypto/include/isa-l_crypto/aes_xts.h"
-#include "../isa-l-crypto/include/isa-l_crypto/isal_crypto_api.h"
+#include "spdk/isa-l-crypto.h"
 #endif
 #endif
 

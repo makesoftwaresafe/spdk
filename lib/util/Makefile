@@ -22,6 +22,11 @@ ifeq ($(CONFIG_HAVE_UUID_GENERATE_SHA1), n)
 LOCAL_SYS_LIBS += -lssl
 endif
 
+ifeq ($(CONFIG_ISAL),y)
+LOCAL_SYS_LIBS += -L$(ISAL_DIR)/.libs -L$(ISAL_DIR)/lib64 -lisal
+endif
+
+
 CFLAGS += -Wpointer-arith
 
 SPDK_MAP_FILE = $(abspath $(CURDIR)/spdk_util.map)

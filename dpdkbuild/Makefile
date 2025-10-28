@@ -99,8 +99,13 @@ endif
 ifeq ($(CONFIG_DPDK_COMPRESSDEV),y)
 DPDK_DRIVERS += compress compress/isal
 DPDK_LIBS += compressdev
+ifeq ($(CONFIG_ISAL_PATH),)
 DPDK_CFLAGS += -I$(ISAL_DIR) -I$(ISAL_BUILD_DIR)
 DPDK_LDFLAGS += -L$(ISAL_DIR)/.libs -lisal
+else
+DPDK_CFLAGS += -I$(ISAL_DIR)/include
+DPDK_LDFLAGS += -L$(ISAL_DIR)/lib64 -lisal
+endif
 endif
 
 DPDK_ENABLED_DRIVERS = $(shell echo $(DPDK_DRIVERS) | sed -E "s/ +/,/g")
