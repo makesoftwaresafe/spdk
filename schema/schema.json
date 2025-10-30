@@ -249,7 +249,7 @@
       "fields": [
         {
           "name": "id",
-          "type": "number",
+          "type": "int32",
           "description": "SCSI LUN ID"
         },
         {

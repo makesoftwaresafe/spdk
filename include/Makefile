@@ -16,13 +16,16 @@ else
 	$(UNINSTALL_HEADER)
 endif
 
-.PHONY: $(INSTALLED_HEADERS)
+.PHONY: $(INSTALLED_HEADERS) jsonrpc
 
-all:
+all: jsonrpc
 	$(Q)cp -r $(SPDK_ROOT_DIR)/include/spdk/* $(SPDK_ROOT_DIR)/build/include/spdk/
 
 clean:
-	@:
+	$(Q)rm -f $(SPDK_ROOT_DIR)/include/spdk_internal/rpc_autogen.h
+
+jsonrpc:
+	$(Q)$(SPDK_ROOT_DIR)/scripts/genrpc.py --schema $(SPDK_ROOT_DIR)/schema/schema.json --rpcs > $(SPDK_ROOT_DIR)/include/spdk_internal/rpc_autogen.h
 
 install: $(INSTALLED_HEADERS)
 

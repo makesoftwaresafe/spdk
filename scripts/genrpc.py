@@ -11,7 +11,7 @@ import re
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, NoReturn
+from typing import Any, Dict
 
 import rpc
 from jinja2 import Environment, FileSystemLoader, Template
@@ -229,8 +229,15 @@ def generate_docs(schema: Dict[str, Any]) -> str:
     return str(schema_template.render(transformation))
 
 
-def generate_rpcs(schema: Dict[str, Any]) -> NoReturn:
-    raise NotImplementedError("Auto generating python/c code for rpc is not yet implemented")
+def generate_rpcs(schema: Dict[str, Any]) -> str:
+    types = {'string': 'char'.ljust(10)+'*', 'boolean': 'bool'.ljust(10),
+             'uint8': 'uint8_t'.ljust(10), 'uint16': 'uint16_t'.ljust(10),
+             'int32': 'int32_t'.ljust(10), 'uint32': 'uint32_t'.ljust(10),
+             'uint64': 'uint64_t'.ljust(10), 'array': '/* TODO: array type */ void	*' }
+    env = Environment(loader=FileSystemLoader(base_dir / "include" / "spdk_internal"),
+                      keep_trailing_newline=False)
+    schema_template = env.get_template('rpc_autogen.h.jinja2')
+    return str(schema_template.render(schema=schema, types=types))
 
 
 if __name__ == "__main__":
@@ -285,4 +292,4 @@ if __name__ == "__main__":
     if args.doc:
         print(generate_docs(schema))
     if args.rpc:
-        generate_rpcs(schema)
+        print(generate_rpcs(schema))
