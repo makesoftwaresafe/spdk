@@ -1209,6 +1209,10 @@ function print_backtrace() {
 
 		if [[ -f $src ]]; then
 			mapfile -t src_map < "$src"
+			# shellcheck  disable=SC1003
+			# Check if this is a line continuation. If so, shift our pointer
+			# to the previous line.
+			[[ ${src_map[line_nr - 2]} == *'\' ]] && ((--line_nr))
 		fi
 
 		# If extdebug set the BASH_ARGC[func_idx], try to fetch all the args. We
