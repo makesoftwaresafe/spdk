@@ -1142,47 +1142,118 @@ function skip_run_test_with_warning() {
 	echo "Please check your $rootdir/test/common/skipped_tests.txt"
 }
 
+function column_backtrace() {
+	if [[ $(uname) == Linux ]]; then
+		column "$@"
+		return 0
+	fi
+
+	# Poor's man column is on board, keeping it best-effort
+	local trace_line
+	local source_line
+	local column_delim
+	local column_header
+	local column_header_length _column_header_length
+
+	# Parse all the local opts as we were dealing with util-linux column
+	local OPTIND OPTARG arg
+	while getopts :l:N:s:t arg; do
+		case "$arg" in
+			l) column_header_length=$OPTARG ;;
+			N) IFS="," read -ra column_header <<< "$OPTARG" ;;
+			s) column_delim=$OPTARG ;;
+			t) ;; # compatibility
+			*) return 1 ;;
+		esac
+	done
+	# Print the header. TODO: make the modifiers a bit more dynamic
+	printf '%-5s %-15s %-20s %-45s %-45s %s\n' "${column_header[@]}"
+	# Read the trace line from stdin as-is
+	while read -r trace_line; do
+		# Now, based on column_header_length, locate the actual source line. Normally
+		# we would split this with IFS, but source may break the delimiter. See comment
+		# in the print_backtrace().
+		source_line=$trace_line _column_header_length=$column_header_length
+		while ((--_column_header_length)); do
+			source_line=${source_line#*"$column_delim"}
+		done
+		# Now remove the source line and split remaining components
+		trace_line=${trace_line%"$source_line"}
+		IFS="$column_delim" read -ra trace_line <<< "$trace_line"
+		# And now add the source line back for the final printout
+		trace_line+=("$source_line")
+		# TODO: make the modifiers a bit more dynamic
+		printf '%-5s %-15s %-20s %-45s %-45s %s\n' "${trace_line[@]}"
+	done
+}
+
 function print_backtrace() {
-	# if errexit is not enabled, don't print a backtrace
-	[[ "$-" =~ e ]] || return 0
-
-	local args=("${BASH_ARGV[@]}")
-
 	xtrace_disable
-	# Reset IFS in case we were called from an environment where it was modified
-	IFS=" "$'\t'$'\n'
+	# Make sure we keep IFS local to not inherit potential garbage from the caller's
+	# environment
+	local IFS
+	# Stack-related vars
+	local func line_nr
+	local func_idx frame_idx
+	local src src_map
+	# arg{c,v}-related vars used to map arguments to proper function on the stack
+	local argc argc_idx arg
+	local args_shift
+	local cmdline
+
 	echo "========== Backtrace start: =========="
-	echo ""
-	for ((i = 1; i < ${#FUNCNAME[@]}; i++)); do
-		local func="${FUNCNAME[$i]}"
-		local line_nr="${BASH_LINENO[$((i - 1))]}"
-		local src="${BASH_SOURCE[$i]}"
-		local bt="" cmdline=()
+	for ((func_idx = 1, frame_idx = 0; func_idx < ${#FUNCNAME[@]}; func_idx++)); do
+		func=${FUNCNAME[func_idx]}
+		line_nr=${BASH_LINENO[func_idx - 1]}
+		src=${BASH_SOURCE[func_idx]}
 
 		if [[ -f $src ]]; then
-			bt=$(nl -w 4 -ba -nln $src | grep -B 5 -A 5 "^${line_nr}[^0-9]" \
-				| sed "s/^/   /g" | sed "s/^   $line_nr /=> $line_nr /g")
+			mapfile -t src_map < "$src"
 		fi
 
-		# If extdebug set the BASH_ARGC[i], try to fetch all the args
-		if ((BASH_ARGC[i] > 0)); then
-			# Use argc as index to reverse the stack
-			local argc=${BASH_ARGC[i]} arg
-			for arg in "${args[@]::BASH_ARGC[i]}"; do
-				cmdline[argc--]="[\"$arg\"]"
+		# If extdebug set the BASH_ARGC[func_idx], try to fetch all the args. We
+		# try to keep it robust enough to collect args regardless of the order in
+		# which we iterate over the stack. Refer to BASH(1) for full description
+		# of how BASH_ARGV[@] is constructed in relation to the function stack.
+		argc_idx=0 args_shift=0 cmdline=()
+		if ((BASH_ARGC[func_idx] > 0)); then
+			while ((argc_idx < func_idx)); do
+				# We need to find starting index of the arguments from the
+				# $func at the $func_idx. We do this by jumping over all
+				# argc belonging to previous functions (if any).
+				: $((args_shift += BASH_ARGC[argc_idx++]))
 			done
-			args=("${args[@]:BASH_ARGC[i]}")
+			# Use separate counter to reverse order of the arguments from
+			# last-to-first to first-to-last.
+			argc=${BASH_ARGC[func_idx]}
+			# Iterate from argument at $args_shift for ARGC number of arguments
+			for arg in "${BASH_ARGV[@]:args_shift:BASH_ARGC[func_idx]}"; do
+				cmdline[argc--]=\"$arg\"
+			done
+		else
+			# Consistently report lack of arguments with an empty string
+			# surrounded with double quotes.
+			cmdline+=('""')
 		fi
-
-		echo "in $src:$line_nr -> $func($(
-			IFS=","
-			printf '%s\n' "${cmdline[*]:-[]}"
-		))"
-		echo "     ..."
-		echo "${bt:-backtrace unavailable}"
-		echo "     ..."
-	done
-	echo ""
+		# We use separate counter to mark each frame|func in case we want to
+		# filter specific functions from the stack in the future - in case of
+		# deep nesting, use of debug wrappers, etc. some functions may always
+		# pop up in the stack (e.g. run_test()) which are not very useful
+		# and may simply clutter the output.
+		printf '[%u]@%s@(%s)@at %s:%u@%s\n' \
+			$((frame_idx++)) "$func" \
+			"$(
+				IFS=","
+				echo "${cmdline[*]}"
+			)" \
+			"$src" \
+			"$line_nr" \
+			"${src_map[line_nr - 1]:-NO LINE AVAILABLE}"
+		# Note that we explicitly pass number of requested columns to format to make
+		# sure that any string that comes from reading a line doesn't break the
+		# delimeter (@) we selected - any instances of '@' coming in from the actual
+		# src will be simply treated literally and as part of the "line" column.
+	done | column_backtrace -t -s "@" -N "id,func_name,func_args,source,source_line" -l5
 	echo "========== Backtrace end =========="
 	xtrace_restore
 	return 0
