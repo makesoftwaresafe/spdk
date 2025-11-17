@@ -1244,13 +1244,13 @@ function print_backtrace() {
 		# deep nesting, use of debug wrappers, etc. some functions may always
 		# pop up in the stack (e.g. run_test()) which are not very useful
 		# and may simply clutter the output.
-		printf '[%u]@%s@(%s)@at %s:%u@%s\n' \
+		printf '[%u]@%s@(%s)@%s:%u@%s\n' \
 			$((frame_idx++)) "$func" \
 			"$(
 				IFS=","
 				echo "${cmdline[*]}"
 			)" \
-			"$src" \
+			"${src#"$rootdir/"}" \
 			"$line_nr" \
 			"${src_map[line_nr - 1]:-NO LINE AVAILABLE}"
 		# Note that we explicitly pass number of requested columns to format to make
@@ -1862,7 +1862,7 @@ set -o errtrace
 shopt -s extdebug
 trap "trap - ERR; print_backtrace >&2" ERR
 
-PS4='+ \t ${test_domain:-} -- ${BASH_SOURCE#${BASH_SOURCE%/*/*}/}@${LINENO} -- \$ '
+PS4='+ \t ${test_domain:-} -- ${BASH_SOURCE#"$rootdir/"}@${LINENO} -- \$ '
 if $SPDK_AUTOTEST_X; then
 	# explicitly enable xtraces, overriding any tracking information.
 	xtrace_fd
