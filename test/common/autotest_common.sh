@@ -1189,6 +1189,32 @@ function column_backtrace() {
 
 function print_backtrace() {
 	xtrace_disable
+
+	local bt_id bt_file bts
+	local bt_counter=0
+	local trace_name
+
+	bts=("$output_dir/"+([0-9])backtrace.!(*.stack))
+	bt_counter=${#bts[@]}
+
+	if [[ -n $test_stack ]]; then
+		# Get the last test reported on the running stack
+		trace_name=${test_stack##*;}
+	fi
+	trace_name=${trace_name:-"${0##*/}"}
+
+	printf -v bt_file '%02ubacktrace.%s' "$bt_counter" "$trace_name"
+	_print_backtrace | tee "$output_dir/$bt_file"
+	# Preserve test stack and timings for this instance - in case test fails these
+	# are not dumped to timing.txt.
+	if [[ -n $test_stack && -n $timing_stack ]]; then
+		echo "${test_stack#;}@${timing_stack##*;}@$(date "+%s")@$trace_name" > "$output_dir/$bt_file.stack"
+	fi
+
+	xtrace_restore
+}
+
+function _print_backtrace() {
 	# Make sure we keep IFS local to not inherit potential garbage from the caller's
 	# environment
 	local IFS
@@ -1201,8 +1227,8 @@ function print_backtrace() {
 	local args_shift
 	local cmdline
 
-	echo "========== Backtrace start: =========="
-	for ((func_idx = 1, frame_idx = 0; func_idx < ${#FUNCNAME[@]}; func_idx++)); do
+	echo "========== BACKTRACE START: (caught in $0) =========="
+	for ((func_idx = 2, frame_idx = 0; func_idx < ${#FUNCNAME[@]}; func_idx++)); do
 		func=${FUNCNAME[func_idx]}
 		line_nr=${BASH_LINENO[func_idx - 1]}
 		src=${BASH_SOURCE[func_idx]}
@@ -1258,9 +1284,50 @@ function print_backtrace() {
 		# delimeter (@) we selected - any instances of '@' coming in from the actual
 		# src will be simply treated literally and as part of the "line" column.
 	done | column_backtrace -t -s "@" -N "id,func_name,func_args,source,source_line" -l5
-	echo "========== Backtrace end =========="
-	xtrace_restore
+	echo "========== BACKTRACE END =========="
 	return 0
+}
+
+function dump_backtrace() {
+	xtrace_disable
+
+	local backtraces=("$output_dir/"+([0-9])backtrace.!(*.stack))
+	local stacks=("$output_dir/"+([0-9])backtrace*.stack)
+	local test_name test_stack test_timing test_timing_dump
+	local bt bt_map
+
+	((${#backtraces[@]} > 0)) || return 0
+
+	# Pretty dump, in order, backtraces caught at various places in the autotest chain.
+	# Filter out "==========" START/END headers - "as is" backtraces should be still
+	# visible in the log after each print_backtrace() call, here we just want to make
+	# the summary as readable as possible, present in a single place.
+
+	printf '\n\n ============ START BACKTRACE SUMMARY\n\n'
+	# Failing entity (most likely a run_test() instance) is always part of the first
+	# backtrace. Describe it properly for visibility.
+	printf '* Failing Component: "%s"\n' "${backtraces[0]#*backtrace.}"
+	if [[ -s ${stacks[0]} ]]; then
+		IFS="@" read -r test_stack test_timing test_timing_dump test_name < "${stacks[0]}"
+		printf '* Failing Test Name: %s\n' "$test_name"
+		printf '* Failing Test Stack: %s\n' "${test_stack//;/->}"
+		# $test_timing is in seconds, normally we would use date to format it into something
+		# more meaningful, but date from coreutils and freebsd's date are not compatible -
+		# freebsd variant doesn't support -d. So instead, just leave it to printf.
+		printf '* Failing Test Started At: %(%c)T\n' "$test_timing"
+		printf '* Failing Test Runtime: %us\n' $((test_timing_dump - test_timing))
+	fi
+
+	printf '\n\n'
+
+	for bt in "${!backtraces[@]}"; do
+		mapfile -t bt_map < "${backtraces[bt]}"
+		printf '@%s --\n' "${backtraces[bt]##*/}"
+		printf '  %s\n' "${bt_map[@]}"
+	done | grep -v "=========="
+	printf '\n\n ============ END BACKTRACE SUMMARY\n\n'
+
+	rm -f "${backtraces[@]}" "${stacks[@]}"
 }
 
 function waitforserial() {
