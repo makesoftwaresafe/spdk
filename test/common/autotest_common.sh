@@ -1111,17 +1111,17 @@ function run_test() {
 	# Signal our daemons to update the test tag
 	update_tag_monitor_resources "$test_domain"
 
-	timing_enter $test_name
 	echo "************************************"
 	echo "START TEST $test_name"
 	echo "************************************"
+	timing_enter $test_name
 	xtrace_restore
-	time "$@"
+	"$@"
 	xtrace_disable
-	echo "************************************"
-	echo "END TEST $test_name"
-	echo "************************************"
 	timing_exit $test_name
+	echo "************************************"
+	echo "END TEST $test_name (in $((now - start_time))s)"
+	echo "************************************"
 
 	export test_domain=${test_domain%"$test_name"}
 	if [ -n "$test_domain" ]; then
