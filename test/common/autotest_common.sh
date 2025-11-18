@@ -1966,6 +1966,7 @@ function init_linux_env() {
 
 # Define temp storage for all the tests. Look for 2GB at minimum
 set_test_storage "${TEST_MIN_STORAGE_SIZE:-$((1 << 31))}"
+enable_coverage
 
 set -o errtrace
 shopt -s extdebug
@@ -1978,5 +1979,3 @@ if $SPDK_AUTOTEST_X; then
 else
 	xtrace_disable
 fi
-
-enable_coverage
