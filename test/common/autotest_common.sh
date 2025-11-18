@@ -264,6 +264,9 @@ export AR_TOOL=$rootdir/scripts/ar-xnvme-fixer
 # For testing nvmes which are attached to some sort of a fanout switch in the CI pool
 export UNBIND_ENTIRE_IOMMU_GROUP=${UNBIND_ENTIRE_IOMMU_GROUP:-no}
 
+# Enable coloring support if requested. Enabled by default
+export AUTOTEST_COLORS_ENABLED=${AUTOTEST_COLORS_ENABLED:-yes}
+
 _LCOV_MAIN=0
 _LCOV_LLVM=1
 _LCOV=$LCOV_MAIN
@@ -1187,6 +1190,40 @@ function column_backtrace() {
 	done
 }
 
+function get_color() {
+	local requested_color=${1:-green}
+	local -A color_pallete=()
+
+	color_pallete['none']=""
+	color_pallete['reset']='\e[0m'
+	color_pallete["red"]='\e[31m'
+	color_pallete["green"]='\e[32m'
+	color_pallete["yellow"]='\e[33m'
+	color_pallete['blue']='\e[34m'
+	color_pallete['magenta']='\e[35m'
+	color_pallete['cyan']='\e[36m'
+	color_pallete['whilte']='\e[37m'
+
+	[[ -n ${color_pallete["$requested_color"]} ]] || return 1
+
+	printf '%b' "${color_pallete["$requested_color"]}"
+}
+
+function colorize() {
+	xtrace_disable
+
+	local color=${1:-none} str=$2
+
+	if [[ $AUTOTEST_COLORS_ENABLED == yes && $color != none ]]; then
+		printf '%s\n' "$(get_color "$color")${str}$(get_color reset)"
+	else
+		# Just pass as-is
+		printf '%s\n' "$str"
+	fi
+
+	xtrace_restore
+}
+
 function print_backtrace() {
 	xtrace_disable
 
@@ -1220,12 +1257,16 @@ function _print_backtrace() {
 	local IFS
 	# Stack-related vars
 	local func line_nr
-	local func_idx frame_idx
+	local func_idx frame_idx frame
 	local src src_map
 	# arg{c,v}-related vars used to map arguments to proper function on the stack
 	local argc argc_idx arg
 	local args_shift
 	local cmdline
+
+	# Paint each failing frame red for visibility
+	local color_frame=()
+	color_frame[0]="colorize red"
 
 	echo "========== BACKTRACE START: (caught in $0) =========="
 	for ((func_idx = 2, frame_idx = 0; func_idx < ${#FUNCNAME[@]}; func_idx++)); do
@@ -1270,8 +1311,8 @@ function _print_backtrace() {
 		# deep nesting, use of debug wrappers, etc. some functions may always
 		# pop up in the stack (e.g. run_test()) which are not very useful
 		# and may simply clutter the output.
-		printf '[%u]@%s@(%s)@%s:%u@%s\n' \
-			$((frame_idx++)) "$func" \
+		printf -v frame '[%u]@%s@(%s)@%s:%u@%s' \
+			"$frame_idx" "$func" \
 			"$(
 				IFS=","
 				echo "${cmdline[*]}"
@@ -1279,6 +1320,7 @@ function _print_backtrace() {
 			"${src#"$rootdir/"}" \
 			"$line_nr" \
 			"${src_map[line_nr - 1]:-NO LINE AVAILABLE}"
+		${color_frame[frame_idx++]:-colorize none} "$frame"
 		# Note that we explicitly pass number of requested columns to format to make
 		# sure that any string that comes from reading a line doesn't break the
 		# delimeter (@) we selected - any instances of '@' coming in from the actual
@@ -1306,10 +1348,10 @@ function dump_backtrace() {
 	printf '\n\n ============ START BACKTRACE SUMMARY\n\n'
 	# Failing entity (most likely a run_test() instance) is always part of the first
 	# backtrace. Describe it properly for visibility.
-	printf '* Failing Component: "%s"\n' "${backtraces[0]#*backtrace.}"
+	printf '* Failing Component: "%s"\n' "$(colorize red ${backtraces[0]#*backtrace.})"
 	if [[ -s ${stacks[0]} ]]; then
 		IFS="@" read -r test_stack test_timing test_timing_dump test_name < "${stacks[0]}"
-		printf '* Failing Test Name: %s\n' "$test_name"
+		printf '* Failing Test Name: %s\n' "$(colorize red "$test_name")"
 		printf '* Failing Test Stack: %s\n' "${test_stack//;/->}"
 		# $test_timing is in seconds, normally we would use date to format it into something
 		# more meaningful, but date from coreutils and freebsd's date are not compatible -
