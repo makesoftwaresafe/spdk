@@ -1256,7 +1256,7 @@ function _print_backtrace() {
 	# environment
 	local IFS
 	# Stack-related vars
-	local func line_nr
+	local func line_nr line
 	local func_idx frame_idx frame
 	local src src_map
 	# arg{c,v}-related vars used to map arguments to proper function on the stack
@@ -1280,6 +1280,7 @@ function _print_backtrace() {
 			# Check if this is a line continuation. If so, shift our pointer
 			# to the previous line.
 			[[ ${src_map[line_nr - 2]} == *'\' ]] && ((--line_nr))
+			line=${src_map[line_nr - 1]##+([[:space:]])}
 		fi
 
 		# If extdebug set the BASH_ARGC[func_idx], try to fetch all the args. We
@@ -1319,7 +1320,7 @@ function _print_backtrace() {
 			)" \
 			"${src#"$rootdir/"}" \
 			"$line_nr" \
-			"${src_map[line_nr - 1]:-NO LINE AVAILABLE}"
+			"${line:-NO LINE AVAILABLE}"
 		${color_frame[frame_idx++]:-colorize none} "$frame"
 		# Note that we explicitly pass number of requested columns to format to make
 		# sure that any string that comes from reading a line doesn't break the
