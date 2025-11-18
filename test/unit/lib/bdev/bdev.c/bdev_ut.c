@@ -7657,13 +7657,13 @@ examine_claimed_config(struct spdk_bdev *bdev, uint32_t modnum)
 static void
 ut_examine_claimed_config0(struct spdk_bdev *bdev)
 {
-	examine_claimed_config(bdev, g_ut_examine_claimed_order[0]);
+	examine_claimed_config(bdev, 0);
 }
 
 static void
 ut_examine_claimed_config1(struct spdk_bdev *bdev)
 {
-	examine_claimed_config(bdev, g_ut_examine_claimed_order[1]);
+	examine_claimed_config(bdev, 1);
 }
 
 static void
@@ -7710,7 +7710,7 @@ examine_claimed_common(bool autoexamine)
 	struct spdk_bdev_module *mod = examine_claimed_mods;
 	struct ut_examine_claimed_ctx *ctx = examine_claimed_ctx;
 	struct spdk_bdev_opts bdev_opts = {};
-	int rc;
+	int rc, claim0, claim1;
 
 	spdk_bdev_get_opts(&bdev_opts, sizeof(bdev_opts));
 	bdev_opts.bdev_auto_examine = autoexamine;
@@ -7781,10 +7781,14 @@ examine_claimed_common(bool autoexamine)
 	 * If two vbdev modules try to claim with conflicting claim types, the module that was added
 	 * last wins. The winner gets the claim and is the only one that has its examine_disk
 	 * callback invoked.
+	 * Use the g_ut_examine_claimed_order to determine order in which modules were added.
+	 * ctx[g_ut_examine_claimed_order[1]] is the winner.
 	 */
 	ctx[0].claim_type = SPDK_BDEV_CLAIM_READ_MANY_WRITE_NONE;
-	ctx[0].expect_claim_err = -EPERM;
 	ctx[1].claim_type = SPDK_BDEV_CLAIM_READ_MANY_WRITE_ONE;
+	claim0 = g_ut_examine_claimed_order[0];
+	claim1 = g_ut_examine_claimed_order[1];
+	ctx[claim0].expect_claim_err = -EPERM;
 	g_examine_done = false;
 	bdev = allocate_bdev("bdev0");
 
@@ -7798,13 +7802,13 @@ examine_claimed_common(bool autoexamine)
 		CU_ASSERT(g_examine_done);
 	}
 
-	CU_ASSERT(ctx[0].examine_config_count == 1);
-	CU_ASSERT(ctx[0].examine_disk_count == 0);
-	CU_ASSERT(ctx[1].examine_config_count == 1);
-	CU_ASSERT(ctx[1].examine_disk_count == 1);
-	SPDK_CU_ASSERT_FATAL(ctx[1].desc != NULL);
-	CU_ASSERT(ctx[1].desc->claim->module == &mod[1]);
-	CU_ASSERT(bdev->internal.claim_type == SPDK_BDEV_CLAIM_READ_MANY_WRITE_ONE);
+	CU_ASSERT(ctx[claim0].examine_config_count == 1);
+	CU_ASSERT(ctx[claim0].examine_disk_count == 0);
+	CU_ASSERT(ctx[claim1].examine_config_count == 1);
+	CU_ASSERT(ctx[claim1].examine_disk_count == 1);
+	SPDK_CU_ASSERT_FATAL(ctx[claim1].desc != NULL);
+	CU_ASSERT(ctx[claim1].desc->claim->module == &mod[claim1]);
+	CU_ASSERT(bdev->internal.claim_type == ctx[claim1].claim_type);
 	reset_examine_claimed_ctx();
 	free_bdev(bdev);
 
