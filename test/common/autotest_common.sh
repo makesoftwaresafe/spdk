@@ -1115,7 +1115,7 @@ function run_test() {
 	update_tag_monitor_resources "$test_domain"
 
 	echo "************************************"
-	echo "START TEST $test_name"
+	echo "START TEST $(colorize yellow "$test_name")"
 	echo "************************************"
 	timing_enter $test_name
 	xtrace_restore
@@ -1123,7 +1123,7 @@ function run_test() {
 	xtrace_disable
 	timing_exit $test_name
 	echo "************************************"
-	echo "END TEST $test_name (in $((now - start_time))s)"
+	echo "END TEST $(colorize green "$test_name") (in $((now - start_time))s)"
 	echo "************************************"
 
 	export test_domain=${test_domain%"$test_name"}
