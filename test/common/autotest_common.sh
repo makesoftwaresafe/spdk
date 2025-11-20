@@ -54,6 +54,7 @@ fi
 source "$rootdir/test/common/applications.sh"
 source "$rootdir/scripts/common.sh"
 source "$rootdir/scripts/perf/pm/common"
+source "$rootdir/test/common/colors.sh"
 
 : ${RUN_NIGHTLY:=0}
 export RUN_NIGHTLY
@@ -263,9 +264,6 @@ export AR_TOOL=$rootdir/scripts/ar-xnvme-fixer
 
 # For testing nvmes which are attached to some sort of a fanout switch in the CI pool
 export UNBIND_ENTIRE_IOMMU_GROUP=${UNBIND_ENTIRE_IOMMU_GROUP:-no}
-
-# Enable coloring support if requested. Enabled by default
-export AUTOTEST_COLORS_ENABLED=${AUTOTEST_COLORS_ENABLED:-yes}
 
 _LCOV_MAIN=0
 _LCOV_LLVM=1
@@ -1188,40 +1186,6 @@ function column_backtrace() {
 		# TODO: make the modifiers a bit more dynamic
 		printf '%-5s %-15s %-20s %-45s %-45s %s\n' "${trace_line[@]}"
 	done
-}
-
-function get_color() {
-	local requested_color=${1:-green}
-	local -A color_pallete=()
-
-	color_pallete['none']=""
-	color_pallete['reset']='\e[0m'
-	color_pallete["red"]='\e[31m'
-	color_pallete["green"]='\e[32m'
-	color_pallete["yellow"]='\e[33m'
-	color_pallete['blue']='\e[34m'
-	color_pallete['magenta']='\e[35m'
-	color_pallete['cyan']='\e[36m'
-	color_pallete['whilte']='\e[37m'
-
-	[[ -n ${color_pallete["$requested_color"]} ]] || return 1
-
-	printf '%b' "${color_pallete["$requested_color"]}"
-}
-
-function colorize() {
-	xtrace_disable
-
-	local color=${1:-none} str=$2
-
-	if [[ $AUTOTEST_COLORS_ENABLED == yes && $color != none ]]; then
-		printf '%s\n' "$(get_color "$color")${str}$(get_color reset)"
-	else
-		# Just pass as-is
-		printf '%s\n' "$str"
-	fi
-
-	xtrace_restore
 }
 
 function print_backtrace() {
