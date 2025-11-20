@@ -1310,7 +1310,7 @@ function dump_backtrace() {
 	# visible in the log after each print_backtrace() call, here we just want to make
 	# the summary as readable as possible, present in a single place.
 
-	printf '\n\n ============ START BACKTRACE SUMMARY\n\n'
+	printf '\n\n > %s\n\n' "$(underline "$(colorize orange "START BACKTRACE SUMMARY")")"
 	# Failing entity (most likely a run_test() instance) is always part of the first
 	# backtrace. Describe it properly for visibility.
 	printf '* Failing Component: "%s"\n' "$(colorize red ${backtraces[0]#*backtrace.})"
@@ -1332,7 +1332,7 @@ function dump_backtrace() {
 		printf '@%s --\n' "${backtraces[bt]##*/}"
 		printf '  %s\n' "${bt_map[@]}"
 	done | grep -v "=========="
-	printf '\n\n ============ END BACKTRACE SUMMARY\n\n'
+	printf '\n\n < %s\n\n' "$(underline "$(colorize orange "END BACKTRACE SUMMARY")")"
 
 	rm -f "${backtraces[@]}" "${stacks[@]}"
 }
