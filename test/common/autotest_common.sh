@@ -674,7 +674,7 @@ function timing() {
 	direction="$1"
 	testname="$2"
 
-	now=$(date +%s)
+	now=$(get_epoch_seconds)
 
 	if [ "$direction" = "enter" ]; then
 		export timing_stack="${timing_stack:-};${now}"
@@ -737,6 +737,10 @@ function timing_finish() {
 		--countname seconds \
 		"$output_dir/timing.txt" \
 		> "$output_dir/timing.svg"
+}
+
+function get_epoch_seconds() {
+	echo "${EPOCHSECONDS:-"$(date "+%s")"}"
 }
 
 function create_test_list() {
@@ -1209,7 +1213,7 @@ function print_backtrace() {
 	# Preserve test stack and timings for this instance - in case test fails these
 	# are not dumped to timing.txt.
 	if [[ -n $test_stack && -n $timing_stack ]]; then
-		echo "${test_stack#;}@${timing_stack##*;}@$(date "+%s")@$trace_name" > "$output_dir/$bt_file.stack"
+		echo "${test_stack#;}@${timing_stack##*;}@$(get_epoch_seconds)@$trace_name" > "$output_dir/$bt_file.stack"
 	fi
 
 	xtrace_restore
@@ -1302,9 +1306,11 @@ function dump_backtrace() {
 	local stacks=("$output_dir/"+([0-9])backtrace*.stack)
 	local test_name test_stack test_timing test_timing_dump
 	local bt bt_map
+	local dump_time
 
 	((${#backtraces[@]} > 0)) || return 0
 
+	dump_time=$(get_epoch_seconds)
 	# Pretty dump, in order, backtraces caught at various places in the autotest chain.
 	# Filter out "==========" START/END headers - "as is" backtraces should be still
 	# visible in the log after each print_backtrace() call, here we just want to make
@@ -1323,6 +1329,7 @@ function dump_backtrace() {
 		# freebsd variant doesn't support -d. So instead, just leave it to printf.
 		printf '* Failing Test Started At: %(%c)T\n' "$test_timing"
 		printf '* Failing Test Runtime: %us\n' $((test_timing_dump - test_timing))
+		printf '* Cleanup Time: %us\n' $((dump_time - test_timing_dump))
 	fi
 
 	printf '\n\n'
