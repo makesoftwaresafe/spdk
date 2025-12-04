@@ -6,9 +6,10 @@
 #
 
 import argparse
+
+from spdk.rpc.client import print_array, print_dict, print_json  # noqa  # noqa
 from spdk.rpc.cmd_parser import strip_globals
-from spdk.rpc.client import print_dict, print_json, print_array  # noqa
-from spdk.rpc.helpers import DeprecateTrueAction, DeprecateFalseAction
+from spdk.rpc.helpers import DeprecateFalseAction, DeprecateTrueAction
 
 
 def add_parser(subparsers):
@@ -93,7 +94,7 @@ def add_parser(subparsers):
     p.add_argument('--cpumask', help='cpu mask for this controller')
     p.add_argument('--transport', help='virtio blk transport name (default: vhost_user_blk)')
     p.add_argument("-r", "--readonly", action='store_true', help='Set controller as read-only')
-    p.add_argument("-p", "--packed_ring", action='store_true', help='Set controller as packed ring supported')
+    p.add_argument("-p", "--packed-ring", action='store_true', help='Set controller as packed ring supported')
     p.set_defaults(func=vhost_create_blk_controller)
 
     def vhost_get_controllers(args):
