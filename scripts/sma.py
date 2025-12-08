@@ -17,8 +17,8 @@ import yaml
 
 sys.path.append(os.path.dirname(__file__) + '/../python')
 
-import spdk.sma as sma               # noqa
-import spdk.rpc.client as rpcclient  # noqa
+from spdk import sma
+from spdk.rpc import client as rpcclient
 
 
 def parse_config(path):

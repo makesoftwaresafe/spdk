@@ -130,7 +130,7 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
 def lint_py_cli(schema: Dict[str, Any]) -> None:
     types = {'string' : str, 'uint8': int, 'uint16': int, 'int32': int, 'uint32': int, 'uint64': int, 'boolean':bool, 'array': str.split}
     exceptions = {'load_config', 'load_subsystem_config', 'save_config', 'save_subsystem_config'}
-    parser, subparsers = rpc.create_parser()
+    _, subparsers = rpc.create_parser()
     schema_methods = set(method["name"] for method in schema['methods'])
     class_methods = set(dir(rpc.JSONRPCClient))
     conflicts = schema_methods & class_methods

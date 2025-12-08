@@ -57,10 +57,10 @@ def add_parser(subparsers):
     p.set_defaults(func=nvmf_set_config)
 
     oncs = ('nvmcmps', 'nvmdsmsv', 'nvmwzsv', 'reservs', 'nvmcpys')
-    help_oncs = ", ".join(("all",) + oncs)
+    help_oncs = ", ".join(("all", *oncs))
 
     fuses = ('fcws',)
-    help_fuses = ", ".join(("all",) + fuses)
+    help_fuses = ", ".join(("all", *fuses))
 
     def nvmf_create_transport(args):
         params = strip_globals(vars(args))

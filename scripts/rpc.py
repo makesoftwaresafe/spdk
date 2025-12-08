@@ -16,10 +16,10 @@ import types
 
 sys.path.insert(0, os.path.dirname(__file__) + '/../python')
 
-import spdk.cli as cli  # noqa
-from spdk.rpc.client import JSONRPCDryRunClient, JSONRPCClient, JSONRPCGoClient, JSONRPCException  # noqa
-from spdk.rpc.helpers import check_called_name, hint_rpc_name  # noqa
-from spdk.rpc.cmd_parser import print_null  # noqa
+from spdk import cli
+from spdk.rpc.client import JSONRPCClient, JSONRPCDryRunClient, JSONRPCException, JSONRPCGoClient
+from spdk.rpc.cmd_parser import print_null
+from spdk.rpc.helpers import check_called_name, hint_rpc_name
 
 
 def create_parser():

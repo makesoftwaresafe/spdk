@@ -12,8 +12,7 @@ import time
 
 sys.path.append(os.path.dirname(__file__) + '/../python')
 
-from spdk.rpc.client import JSONRPCClient  # noqa
-
+from spdk.rpc.client import JSONRPCClient
 
 SPDK_CPU_STAT = "/proc/stat"
 SPDK_UPTIME = "/proc/uptime"

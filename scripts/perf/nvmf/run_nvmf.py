@@ -32,10 +32,10 @@ import paramiko
 
 sys.path.append(os.path.dirname(__file__) + '/../../../python')
 
-import spdk.rpc as rpc  # noqa
 from common import parse_results
 from spdk.rpc.client import JSONRPCClient
 from spdk.rpc.cmd_parser import print_dict
+
 
 @dataclass
 class ConfigField:

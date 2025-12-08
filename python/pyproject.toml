@@ -113,6 +113,10 @@ select = [
     "B",  # flake8-bugbear
     "A",  # flake8-builtins
     "COM",# flake8-commas
+    "RUF",# Ruff-specific rules
+]
+ignore = [
+    "RUF012",        # mutable class attributes must use ClassVar
 ]
 
 [tool.mypy]
