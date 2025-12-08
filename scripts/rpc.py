@@ -131,8 +131,8 @@ def main():
         parser.print_help()
         exit(1)
     if args.is_server:
-        for input in sys.stdin:
-            cmd = shlex.split(input)
+        for line in sys.stdin:
+            cmd = shlex.split(line)
             try:
                 load_plugin(cmd, subparsers, plugins)
                 tmp_args = parser.parse_args(cmd)

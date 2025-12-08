@@ -797,8 +797,8 @@ class UIVhostTargetObj(UINode):
 
     def summary(self):
         luns = "LUNs: %s" % len(self.target["luns"])
-        id = "TargetID: %s" % self.target["scsi_dev_num"]
-        info = ",".join([luns, id])
+        tgt_id = "TargetID: %s" % self.target["scsi_dev_num"]
+        info = ",".join([luns, tgt_id])
         return info, True
 
 

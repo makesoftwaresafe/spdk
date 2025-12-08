@@ -111,6 +111,7 @@ select = [
     "W",  # warnings
     "I",  # isort (import sorting)
     "B",  # flake8-bugbear
+    "A",  # flake8-builtins
     "COM",# flake8-commas
 ]
 

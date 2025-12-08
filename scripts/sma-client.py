@@ -40,8 +40,8 @@ class Client:
         with grpc.insecure_channel(f'{self.addr}:{self.port}') as channel:
             stub = sma_pb2_grpc.StorageManagementAgentStub(channel)
             func = getattr(stub, method)
-            input, output = self._get_method_types(method)
-            response = func(request=json_format.ParseDict(params, input()))
+            input_type, output_type = self._get_method_types(method)
+            response = func(request=json_format.ParseDict(params, input_type()))
             return json_format.MessageToDict(response,
                                              preserving_proto_field_name=True)
 

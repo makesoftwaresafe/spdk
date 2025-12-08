@@ -144,9 +144,9 @@ class JSONRPCClient(object):
         self.sock.sendall(reqstr.encode("utf-8"))
 
     def send(self, method, params=None):
-        id = self.add_request(method, params)
+        req_id = self.add_request(method, params)
         self.flush()
-        return id
+        return req_id
 
     def decode_one_response(self):
         try:

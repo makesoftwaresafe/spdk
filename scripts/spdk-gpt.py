@@ -22,12 +22,12 @@ def lbsize(block):
         return int(lbs.read())
 
 
-def readb(block, offset, length, format="Q"):
+def readb(block, offset, length, fmt="Q"):
     b = os.open(block, os.O_RDONLY)
     os.lseek(b, offset, os.SEEK_SET)
     data = os.read(b, length)
     os.close(b)
-    return struct.unpack(format, data)[0]
+    return struct.unpack(fmt, data)[0]
 
 
 def is_spdk_gpt(block, entry):

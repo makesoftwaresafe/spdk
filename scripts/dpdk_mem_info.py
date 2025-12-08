@@ -131,8 +131,8 @@ class heap_element:
 
 
 class heap:
-    def __init__(self, id, size, num_allocations):
-        self.id = id
+    def __init__(self, heap_id, size, num_allocations):
+        self.id = heap_id
         self.size = size
         self.num_allocations = num_allocations
         self.free_elements = []
