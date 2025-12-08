@@ -173,7 +173,7 @@ def verify_scsi_devices_rpc_methods(rpc_py):
 def create_malloc_bdevs_rpc_methods(rpc_py, rpc_param):
     rpc = spdk_rpc(rpc_py)
 
-    for i in range(1, rpc_param['lun_total'] + 1):
+    for _ in range(1, rpc_param['lun_total'] + 1):
         rpc.bdev_malloc_create(rpc_param['malloc_bdev_size'], rpc_param['malloc_block_size'])
 
     print("create_malloc_bdevs_rpc_methods passed")

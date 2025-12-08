@@ -54,7 +54,7 @@ def create_parser():
     parser.set_defaults(is_server=False)
     parser.add_argument('--plugin', dest='rpc_plugin', help='Module name of plugin with additional RPC commands')
     subparsers = parser.add_subparsers(help='RPC methods', dest='called_rpc_name', metavar='')
-    for name, obj in vars(cli).items():
+    for _, obj in vars(cli).items():
         if isinstance(obj, types.ModuleType) and obj.__name__.startswith("spdk.cli."):
             obj.add_parser(subparsers)
     return parser, subparsers
@@ -156,7 +156,7 @@ def main():
         exit(0)
     elif args.dry_run:
         args.client = JSONRPCDryRunClient()
-        for name, obj in vars(cli).items():
+        for _, obj in vars(cli).items():
             if isinstance(obj, types.ModuleType) and obj.__name__.startswith("spdk.cli."):
                 obj.print_dict = obj.print_json = obj.print_array = print_null
     elif args.go_client or use_go_client:

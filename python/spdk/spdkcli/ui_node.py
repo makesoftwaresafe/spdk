@@ -41,7 +41,11 @@ class UINode(ConfigNode):
         """
         self.ui_command_ls(path, depth)
 
-    def execute_command(self, command, pparams=[], kparams={}):
+    def execute_command(self, command, pparams=None, kparams=None):
+        if kparams is None:
+            kparams = {}
+        if pparams is None:
+            pparams = []
         try:
             result = ConfigNode.execute_command(self, command,
                                                 pparams, kparams)

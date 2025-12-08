@@ -58,7 +58,7 @@ class JSONRPCClient(object):
         self._recv_buf = ""
         self._reqs = []
 
-        for i in range(connect_retries):
+        for _ in range(connect_retries):
             try:
                 self._connect(addr, port)
                 return
@@ -98,7 +98,8 @@ class JSONRPCClient(object):
         except socket.error as ex:
             raise JSONRPCException("Error while connecting to %s\n"
                                    "Is SPDK application running?\n"
-                                   "Error details: %s" % (addr, ex))
+                                   "Error details: %s" % (addr, ex),
+                                   ) from ex
 
     def get_logger(self):
         return self._logger
@@ -244,8 +245,8 @@ class JSONRPCGoClient(object):
                                        + '/../../build/go/rpc/libspdk_gorpc.so')
         try:
             lib = ctypes.cdll.LoadLibrary(client_path)
-        except OSError:
-            raise JSONRPCException(f'Failed to load the Go RPC client at {client_path}')
+        except OSError as err:
+            raise JSONRPCException(f'Failed to load the Go RPC client at {client_path}') from err
         lib.spdk_gorpc_free_response.argtypes = [ctypes.POINTER(ctypes.c_char)]
         lib.spdk_gorpc_call.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         lib.spdk_gorpc_call.restype = GoClientResponse
