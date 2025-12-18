@@ -44,7 +44,11 @@ fi
 # First, add extra EPEL, ELRepo, Ceph repos to have a chance of covering most of the packages
 # on the enterprise systems, like RHEL.
 if [[ $ID == centos || $ID == rhel || $ID == rocky ]]; then
-	repos=() enable=("epel" "elrepo" "elrepo-testing") add=()
+	repos=() enable=("epel" "elrepo" "elrepo-testing") add=() elrepo_configured=false
+
+	if [[ -n $(yum repolist --all elrepo) ]]; then
+		elrepo_configured=true
+	fi
 
 	if [[ $VERSION_ID == 8* ]]; then
 		repos+=("https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm")
@@ -97,6 +101,10 @@ if [[ $ID == centos || $ID == rhel || $ID == rocky ]]; then
 	if [[ $ID == rhel ]]; then
 		[[ $VERSION_ID == 8* ]] && sub repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 		[[ $VERSION_ID == 9* ]] && sub repos --enable codeready-builder-for-rhel-9-x86_64-rpms
+	fi
+
+	if [[ $elrepo_configured == false ]]; then
+		yum-config-manager --setopt elrepo.mirrorlist= --setopt elrepo-testing.mirrorlist= --save
 	fi
 fi
 
