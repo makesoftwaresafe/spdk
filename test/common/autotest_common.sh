@@ -1199,7 +1199,7 @@ function print_backtrace() {
 	local bt_counter=0
 	local trace_name
 
-	bts=("$output_dir/"+([0-9])backtrace.!(*.stack))
+	bts=("$output_dir/"+([0-9])backtrace.!(*.@(stack|context)))
 	bt_counter=${#bts[@]}
 
 	if [[ -n $test_stack ]]; then
@@ -1209,7 +1209,8 @@ function print_backtrace() {
 	trace_name=${trace_name:-"${0##*/}"}
 
 	printf -v bt_file '%02ubacktrace.%s' "$bt_counter" "$trace_name"
-	_print_backtrace | tee "$output_dir/$bt_file"
+	# We expect to get context of the failing code on stderr
+	_print_backtrace 2> "$output_dir/$bt_file.context" | tee "$output_dir/$bt_file"
 	# Preserve test stack and timings for this instance - in case test fails these
 	# are not dumped to timing.txt.
 	if [[ -n $test_stack && -n $timing_stack ]]; then
@@ -1217,6 +1218,32 @@ function print_backtrace() {
 	fi
 
 	xtrace_restore
+}
+
+function get_context() {
+	local line_idx=$1 line=$2 src=$3 src_map=("${!4}") context_size=${5:-${BACKTRACE_CONTEXT_SIZE:-5}}
+	local context_prev_idx context_post_idx
+	local context_prev context_post
+
+	context_prev_idx=$((line_idx - context_size))
+	context_post_idx=$((line_idx + 1))
+
+	context_prev_idx=$((context_prev_idx < 0 ? 0 : context_prev_idx))
+	if ((context_prev_idx != line_idx)); then
+		context_prev=("${src_map[@]:context_prev_idx:context_size}")
+	fi
+	context_post=("${src_map[@]:context_post_idx:context_size}")
+
+	printf '==> %s <==\n' "$src"
+	if ((${#context_prev[@]} > 0)); then
+		printf ' %s\n' "${context_prev[@]}"
+	fi
+	# Colorize and underline the failing line to make it stand out within the provided context.
+	printf '%s\n' "$(colorize red "$line") # line:$((line_idx - 1)) <-- $(underline "FAILURE HERE")"
+	if ((${#context_post[@]} > 0)); then
+		printf ' %s\n' "${context_post[@]}"
+	fi
+
 }
 
 function _print_backtrace() {
@@ -1248,7 +1275,14 @@ function _print_backtrace() {
 			# Check if this is a line continuation. If so, shift our pointer
 			# to the previous line.
 			[[ ${src_map[line_nr - 2]} == *'\' ]] && ((--line_nr))
-			line=${src_map[line_nr - 1]##+([[:space:]])}
+			line=${src_map[line_nr - 1]}
+			# Gather source context and send it to stderr, including original line
+			get_context \
+				$((line_nr - 1)) \
+				"$line" \
+				"$src" \
+				"src_map[@]" >&2
+			line=${line##+([[:space:]])}
 		fi
 
 		# If extdebug set the BASH_ARGC[func_idx], try to fetch all the args. We
@@ -1302,11 +1336,13 @@ function _print_backtrace() {
 function dump_backtrace() {
 	xtrace_disable
 
-	local backtraces=("$output_dir/"+([0-9])backtrace.!(*.stack))
+	local backtraces=("$output_dir/"+([0-9])backtrace.!(*.@(stack|context)))
 	local stacks=("$output_dir/"+([0-9])backtrace*.stack)
+	local contexts=("$output_dir/"+([0-9])backtrace*.context)
 	local test_name test_stack test_timing test_timing_dump
 	local bt bt_map
 	local dump_time
+	local context
 
 	((${#backtraces[@]} > 0)) || return 0
 
@@ -1331,7 +1367,12 @@ function dump_backtrace() {
 		printf '* Failing Test Runtime: %us\n' $((test_timing_dump - test_timing))
 		printf '* Cleanup Time: %us\n' $((dump_time - test_timing_dump))
 	fi
-
+	# Similarly to the above, print code context but only for the first backtrace instance.
+	if [[ -s ${contexts[0]} ]]; then
+		printf '* Failing Code:\n\n'
+		mapfile -t context < "${contexts[0]}"
+		printf '  %s\n' "${context[@]}"
+	fi
 	printf '\n\n'
 
 	for bt in "${!backtraces[@]}"; do
@@ -1341,7 +1382,7 @@ function dump_backtrace() {
 	done | grep -v "=========="
 	printf '\n\n < %s\n\n' "$(underline "$(colorize orange "END BACKTRACE SUMMARY")")"
 
-	rm -f "${backtraces[@]}" "${stacks[@]}"
+	rm -f "${backtraces[@]}" "${stacks[@]}" "${contexts[@]}"
 }
 
 function waitforserial() {
