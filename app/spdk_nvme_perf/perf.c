@@ -1029,6 +1029,8 @@ nvme_init_ns_worker_ctx(struct ns_worker_ctx *ns_ctx)
 	ns_ctx->u.nvme.num_all_qpairs = g_nr_io_queues_per_ns + g_nr_unused_io_queues;
 	ns_ctx->u.nvme.qpair = calloc(ns_ctx->u.nvme.num_all_qpairs, sizeof(struct spdk_nvme_qpair *));
 	if (!ns_ctx->u.nvme.qpair) {
+		fprintf(stderr, "ERROR: calloc failed for qpair array (total=%d)\n",
+			ns_ctx->u.nvme.num_all_qpairs);
 		return -1;
 	}
 
@@ -1056,18 +1058,20 @@ nvme_init_ns_worker_ctx(struct ns_worker_ctx *ns_ctx)
 					  sizeof(opts));
 		qpair = ns_ctx->u.nvme.qpair[i];
 		if (!qpair) {
-			printf("ERROR: spdk_nvme_ctrlr_alloc_io_qpair failed\n");
+			fprintf(stderr, "ERROR: spdk_nvme_ctrlr_alloc_io_qpair failed\n");
 			goto qpair_failed;
 		}
 
-		if (spdk_nvme_poll_group_add(group, qpair)) {
-			printf("ERROR: unable to add I/O qpair to poll group.\n");
+		rc = spdk_nvme_poll_group_add(group, qpair);
+		if (rc) {
+			fprintf(stderr, "ERROR: unable to add I/O qpair to poll group, rc:%d\n", rc);
 			spdk_nvme_ctrlr_free_io_qpair(qpair);
 			goto qpair_failed;
 		}
 
-		if (spdk_nvme_ctrlr_connect_io_qpair(entry->u.nvme.ctrlr, qpair)) {
-			printf("ERROR: unable to connect I/O qpair.\n");
+		rc = spdk_nvme_ctrlr_connect_io_qpair(entry->u.nvme.ctrlr, qpair);
+		if (rc) {
+			fprintf(stderr, "ERROR: unable to connect I/O qpair, rc:%d\n", rc);
 			spdk_nvme_ctrlr_free_io_qpair(qpair);
 			goto qpair_failed;
 		}
@@ -1089,6 +1093,14 @@ nvme_init_ns_worker_ctx(struct ns_worker_ctx *ns_ctx)
 
 	/* If we reach here, it means we either timed out, or some connection failed. */
 	assert(spdk_get_ticks() > poll_timeout_tsc || rc == -EIO);
+
+	if (spdk_get_ticks() > poll_timeout_tsc) {
+		fprintf(stderr, "ERROR: qpair connect timeout\n");
+	} else if (rc == -EIO) {
+		fprintf(stderr, "ERROR: one or more IO qpairs failed after connect, rc=%d)\n", rc);
+	} else {
+		fprintf(stderr, "ERROR: unexpected qpair connect state rc=%d\n", rc);
+	}
 
 qpair_failed:
 	for (; i > 0; --i) {
@@ -1701,7 +1713,8 @@ work_fn(void *arg)
 	/* Allocate queue pairs for each namespace. */
 	TAILQ_FOREACH(ns_ctx, &worker->ns_ctx, link) {
 		if (init_ns_worker_ctx(ns_ctx) != 0) {
-			printf("ERROR: init_ns_worker_ctx() failed\n");
+			printf("ERROR: init_ns_worker_ctx() failed for nsid=%u\n",
+			       spdk_nvme_ns_get_id(ns_ctx->entry->u.nvme.ns));
 			/* Wait on barrier to avoid blocking of successful workers */
 			pthread_barrier_wait(&g_worker_sync_barrier);
 			ns_ctx->status = 1;
