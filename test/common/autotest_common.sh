@@ -1198,6 +1198,10 @@ function print_backtrace() {
 	local bt_id bt_file bts
 	local bt_counter=0
 	local trace_name
+	local trace_lock
+
+	exec {trace_lock}> "$output_dir/.backtrace.lock"
+	flock "$trace_lock"
 
 	bts=("$output_dir/"+([0-9])backtrace.!(*.@(stack|context)))
 	bt_counter=${#bts[@]}
@@ -1217,6 +1221,7 @@ function print_backtrace() {
 		echo "${test_stack#;}@${timing_stack##*;}@$(get_epoch_seconds)@$trace_name" > "$output_dir/$bt_file.stack"
 	fi
 
+	flock -u "$trace_lock"
 	xtrace_restore
 }
 
@@ -1375,8 +1380,15 @@ function dump_backtrace() {
 	fi
 	printf '\n\n'
 
+	local -A track_bt_bases=()
+	local bt_base
 	for bt in "${!backtraces[@]}"; do
 		mapfile -t bt_map < "${backtraces[bt]}"
+		if [[ -z $BACKTRACE_INCLUDE_DUPLICATES ]]; then
+			bt_base=$(base64 -w0 "${backtraces[bt]}")
+			[[ -n ${track_bt_bases["$bt_base"]} ]] && continue
+			track_bt_bases["$bt_base"]=${backtraces[bt]}
+		fi
 		printf '@%s --\n' "${backtraces[bt]##*/}"
 		printf '  %s\n' "${bt_map[@]}"
 	done | grep -v "=========="
