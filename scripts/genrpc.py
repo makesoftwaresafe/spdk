@@ -161,9 +161,7 @@ def lint_py_cli(schema: Dict[str, Any]) -> None:
                     newtype = types.get(action.type.func)
                 else:
                     newtype = types.get(action.type)
-                if not newtype:
-                    raise ValueError(f"Invalid schema type '{param['type']}' for '{param['name']}' in '{method['name']}' rpc")
-                if param['type'] != newtype and action.metavar is None and param['type'] != "array":
+                if param['type'] != newtype:
                     raise ValueError(f"For method {method['name']}: parameter '{param['name']}': 'type' field is mismatched")
 
 

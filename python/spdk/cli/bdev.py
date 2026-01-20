@@ -1027,16 +1027,11 @@ def add_parser(subparsers):
     p.set_defaults(func=bdev_get_bdevs)
 
     def bdev_get_iostat(args):
-        names = None
-        if args.names:
-            names = []
-            for i in args.names.strip().split(','):
-                names.append(i)
         print_dict(args.client.bdev_get_iostat(
                                             name=args.name,
                                             per_channel=args.per_channel,
                                             reset_mode=args.reset_mode,
-                                            names=names))
+                                            names=args.names))
 
     p = subparsers.add_parser('bdev_get_iostat',
                               help='Display current I/O statistics of all the blockdevs or specified blockdev.')
@@ -1046,7 +1041,8 @@ def add_parser(subparsers):
     p.set_defaults(func=bdev_get_iostat)
     group = p.add_mutually_exclusive_group()
     group.add_argument('-b', '--name', help="Name of the Blockdev. Example: Nvme0n1")
-    group.add_argument('--names', help='Bdev names to obtain I/O statistics from, comma-separated list in quotes')
+    group.add_argument('--names', type=partial(str.split, sep=','),
+                       help='Bdev names to obtain I/O statistics from, comma-separated list in quotes')
 
     def bdev_reset_iostat(args):
         args.client.bdev_reset_iostat(name=args.name, mode=args.mode)

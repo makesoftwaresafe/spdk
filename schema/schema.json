@@ -370,7 +370,7 @@
         },
         {
           "name": "mappings",
-          "type": "array",
+          "type": "string",
           "description": "Comma-separated list of thread:core mappings. Reserved for static scheduler"
         }
       ]
