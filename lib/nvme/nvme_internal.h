@@ -208,11 +208,14 @@ extern struct spdk_nvme_transport_opts g_spdk_nvme_transport_opts;
 enum nvme_payload_type {
 	NVME_PAYLOAD_TYPE_INVALID = 0,
 
-	/** nvme_request::u.payload.contig_buffer is valid for this request */
+	/** nvme_request::payload.contig_buffer is valid for this request */
 	NVME_PAYLOAD_TYPE_CONTIG,
 
-	/** nvme_request::u.sgl is valid for this request */
+	/** nvme_request::payload.sgl is valid for this request */
 	NVME_PAYLOAD_TYPE_SGL,
+
+	/** nvme_request::payload.iov is valid for this request */
+	NVME_PAYLOAD_TYPE_IOV,
 };
 
 /** Boot partition write states */
@@ -227,11 +230,19 @@ enum nvme_bp_write_state {
  * Descriptor for a request data payload.
  */
 struct nvme_payload {
-	/**
-	 * Functions for retrieving physical addresses for scattered payloads.
-	 */
-	spdk_nvme_req_reset_sgl_cb reset_sgl_fn;
-	spdk_nvme_req_next_sge_cb next_sge_fn;
+	union {
+		struct {
+			/**
+			 * Functions for retrieving physical addresses for scattered payloads.
+			 */
+			spdk_nvme_req_reset_sgl_cb reset_sgl_fn;
+			spdk_nvme_req_next_sge_cb next_sge_fn;
+		};
+		struct {
+			struct iovec *iov;
+			uint32_t iov_count;
+		};
+	};
 
 	uint32_t payload_size;
 
