@@ -221,12 +221,12 @@ _nvme_ns_cmd_split_request_prp(struct spdk_nvme_ns *ns,
 
 	reset_sgl_fn(sgl_cb_arg, payload_offset);
 	next_sge_fn(sgl_cb_arg, (void **)&address, &sge_length);
-	while (req_current_length < req->payload_size) {
+	while (req_current_length < req->payload.payload_size) {
 
 		if (sge_length == 0) {
 			continue;
-		} else if (req_current_length + sge_length > req->payload_size) {
-			sge_length = req->payload_size - req_current_length;
+		} else if (req_current_length + sge_length > req->payload.payload_size) {
+			sge_length = req->payload.payload_size - req_current_length;
 		}
 
 		/*
@@ -236,7 +236,7 @@ _nvme_ns_cmd_split_request_prp(struct spdk_nvme_ns *ns,
 		start_valid = child_length == 0 || _is_page_aligned(address, page_size);
 
 		/* Boolean for whether this is the last SGE in the parent request. */
-		last_sge = (req_current_length + sge_length == req->payload_size);
+		last_sge = (req_current_length + sge_length == req->payload.payload_size);
 
 		/*
 		 * The end of the SGE is invalid if the end address is not page aligned,
@@ -250,7 +250,7 @@ _nvme_ns_cmd_split_request_prp(struct spdk_nvme_ns *ns,
 		 *  In this case, we do not create a child request at all - we just send
 		 *  the original request as a single request at the end of this function.
 		 */
-		child_equals_parent = (child_length + sge_length == req->payload_size);
+		child_equals_parent = (child_length + sge_length == req->payload.payload_size);
 
 		if (start_valid) {
 			/*
@@ -262,7 +262,7 @@ _nvme_ns_cmd_split_request_prp(struct spdk_nvme_ns *ns,
 			 */
 			child_length += sge_length;
 			req_current_length += sge_length;
-			if (req_current_length < req->payload_size) {
+			if (req_current_length < req->payload.payload_size) {
 				next_sge_fn(sgl_cb_arg, (void **)&address, &sge_length);
 				/*
 				 * If the next SGE is not page aligned, we will need to create a
@@ -319,7 +319,7 @@ _nvme_ns_cmd_split_request_prp(struct spdk_nvme_ns *ns,
 		}
 	}
 
-	if (child_length == req->payload_size) {
+	if (child_length == req->payload.payload_size) {
 		/* No splitting was required, so setup the whole payload as one request. */
 		_nvme_ns_cmd_setup_request(ns, req, opc, lba, lba_count, io_flags, apptag_mask, apptag, cdw13);
 	}
@@ -353,18 +353,18 @@ _nvme_ns_cmd_split_request_sgl(struct spdk_nvme_ns *ns,
 	reset_sgl_fn(sgl_cb_arg, payload_offset);
 	num_sges = 0;
 
-	while (req_current_length < req->payload_size) {
+	while (req_current_length < req->payload.payload_size) {
 		next_sge_fn(sgl_cb_arg, (void **)&address, &sge_length);
 
-		if (req_current_length + sge_length > req->payload_size) {
-			sge_length = req->payload_size - req_current_length;
+		if (req_current_length + sge_length > req->payload.payload_size) {
+			sge_length = req->payload.payload_size - req_current_length;
 		}
 
 		accumulated_length += sge_length;
 		req_current_length += sge_length;
 		num_sges++;
 
-		if (num_sges < max_sges && req_current_length < req->payload_size) {
+		if (num_sges < max_sges && req_current_length < req->payload.payload_size) {
 			continue;
 		}
 
@@ -374,7 +374,7 @@ _nvme_ns_cmd_split_request_sgl(struct spdk_nvme_ns *ns,
 		 *  create a child request when no splitting is required - in that case we will
 		 *  fall-through and just create a single request with no children for the entire I/O.
 		 */
-		if (accumulated_length != req->payload_size) {
+		if (accumulated_length != req->payload.payload_size) {
 			struct nvme_request *child;
 			uint32_t child_lba_count;
 			uint32_t child_length;
@@ -421,7 +421,7 @@ _nvme_ns_cmd_split_request_sgl(struct spdk_nvme_ns *ns,
 		}
 	}
 
-	if (accumulated_length == req->payload_size) {
+	if (accumulated_length == req->payload.payload_size) {
 		/* No splitting was required, so setup the whole payload as one request. */
 		_nvme_ns_cmd_setup_request(ns, req, opc, lba, lba_count, io_flags, apptag_mask, apptag, cdw13);
 	}
@@ -451,8 +451,8 @@ _nvme_ns_cmd_rw(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair,
 		return NULL;
 	}
 
-	req->payload_offset = payload_offset;
-	req->md_offset = md_offset;
+	req->payload.payload_offset = payload_offset;
+	req->payload.md_offset = md_offset;
 	req->accel_sequence = accel_sequence;
 
 	/* Zone append commands cannot be split. */

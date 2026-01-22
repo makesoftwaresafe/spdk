@@ -233,6 +233,14 @@ struct nvme_payload {
 	spdk_nvme_req_reset_sgl_cb reset_sgl_fn;
 	spdk_nvme_req_next_sge_cb next_sge_fn;
 
+	uint32_t payload_size;
+
+	/**
+	 * Offset in bytes from the beginning of payload for this request.
+	 * This is used for I/O commands that are split into multiple requests.
+	 */
+	uint32_t payload_offset;
+
 	/**
 	 * Extended IO options passed by the user
 	 */
@@ -248,6 +256,12 @@ struct nvme_payload {
 
 	/** Virtual memory address of a single virtually contiguous metadata buffer */
 	void *md;
+	uint32_t md_size;
+	/**
+	 * Offset in bytes from the beginning of metadata buffer for this request.
+	 * This is used for I/O commands that are split into multiple requests.
+	 */
+	uint32_t md_offset;
 };
 
 #define NVME_PAYLOAD_CONTIG(contig_, md_) \
@@ -300,15 +314,6 @@ struct nvme_request {
 	uint16_t			num_children;
 
 	/**
-	 * Offset in bytes from the beginning of payload for this request.
-	 * This is used for I/O commands that are split into multiple requests.
-	 */
-	uint32_t			payload_offset;
-	uint32_t			md_offset;
-
-	uint32_t			payload_size;
-
-	/**
 	 * Timeout ticks for error injection requests, can be extended in future
 	 * to support per-request timeout feature.
 	 */
@@ -340,8 +345,6 @@ struct nvme_request {
 	 */
 	pid_t				pid;
 	struct spdk_nvme_cpl		cpl;
-
-	uint32_t			md_size;
 
 	/**
 	 * The following members should not be reordered with members
@@ -1485,20 +1488,20 @@ nvme_request_clear(struct nvme_request *req)
 	 *  They will be initialized in nvme_request_add_child()
 	 *  if the request is split.
 	 */
-	memset(req, 0, offsetof(struct nvme_request, payload_size));
+	memset(req, 0, offsetof(struct nvme_request, num_children));
 }
 
 #define NVME_INIT_REQUEST(req, _cb_fn, _cb_arg, _payload, _payload_size, _md_size)	\
-	do {						\
-		nvme_request_clear(req);		\
-		req->cb_fn = _cb_fn;			\
-		req->cb_arg = _cb_arg;			\
-		req->payload = _payload;		\
-		req->payload_size = _payload_size;	\
-		req->md_size = _md_size;		\
-		req->pid = g_spdk_nvme_pid;		\
-		req->submit_tick = 0;			\
-		req->accel_sequence = NULL;		\
+	do {							\
+		nvme_request_clear(req);			\
+		req->cb_fn = _cb_fn;				\
+		req->cb_arg = _cb_arg;				\
+		req->payload = _payload;			\
+		req->payload.payload_size = _payload_size;	\
+		req->payload.md_size = _md_size;		\
+		req->pid = g_spdk_nvme_pid;			\
+		req->submit_tick = 0;				\
+		req->accel_sequence = NULL;			\
 	} while (0);
 
 static inline struct nvme_request *
@@ -1628,7 +1631,7 @@ nvme_complete_request(spdk_nvme_cmd_cb cb_fn, void *cb_arg, struct spdk_nvme_qpa
 static inline void
 nvme_cleanup_user_req(struct nvme_request *req)
 {
-	if (req->user_buffer && req->payload_size) {
+	if (req->user_buffer && req->payload.payload_size) {
 		spdk_free(req->payload.contig_or_cb_arg);
 		req->user_buffer = NULL;
 	}

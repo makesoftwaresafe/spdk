@@ -329,14 +329,14 @@ nvme_user_copy_cmd_complete(void *arg, const struct spdk_nvme_cpl *cpl)
 	void *user_cb_arg;
 	enum spdk_nvme_data_transfer xfer;
 
-	if (req->user_buffer && req->payload_size) {
+	if (req->user_buffer && req->payload.payload_size) {
 		/* Copy back to the user buffer */
 		assert(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_CONTIG);
 		xfer = spdk_nvme_opc_get_data_transfer(req->cmd.opc);
 		if (xfer == SPDK_NVME_DATA_CONTROLLER_TO_HOST ||
 		    xfer == SPDK_NVME_DATA_BIDIRECTIONAL) {
 			assert(req->pid == getpid());
-			memcpy(req->user_buffer, req->payload.contig_or_cb_arg, req->payload_size);
+			memcpy(req->user_buffer, req->payload.contig_or_cb_arg, req->payload.payload_size);
 		}
 	}
 

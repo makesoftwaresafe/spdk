@@ -429,8 +429,8 @@ test_build_contig_hw_sgl_request(void)
 	ctrlr.trid.trtype = SPDK_NVME_TRANSPORT_PCIE;
 	qpair.ctrlr = &ctrlr;
 	/* Test 1: Payload covered by a single mapping */
-	req.payload_size = 100;
 	req.payload = NVME_PAYLOAD_CONTIG((void *)0xbeef0, NULL);
+	req.payload.payload_size = 100;
 	g_vtophys_size = 100;
 	MOCK_SET(spdk_vtophys, 0xDEADBEEF);
 
@@ -448,9 +448,9 @@ test_build_contig_hw_sgl_request(void)
 
 	/* Test 2: Payload covered by a single mapping, but request is at an offset */
 	qpair.ctrlr = &ctrlr;
-	req.payload_size = 100;
-	req.payload_offset = 50;
 	req.payload = NVME_PAYLOAD_CONTIG((void *)0xbeef0, NULL);
+	req.payload.payload_size = 100;
+	req.payload.payload_offset = 50;
 	g_vtophys_size = 1000;
 	MOCK_SET(spdk_vtophys, 0xDEADBEEF);
 
@@ -468,8 +468,8 @@ test_build_contig_hw_sgl_request(void)
 
 	/* Test 3: Payload spans two mappings */
 	qpair.ctrlr = &ctrlr;
-	req.payload_size = 100;
 	req.payload = NVME_PAYLOAD_CONTIG((void *)0xbeef0, NULL);
+	req.payload.payload_size = 100;
 	g_vtophys_size = 60;
 	tr.prp_sgl_bus_addr = 0xFF0FF;
 	MOCK_SET(spdk_vtophys, 0xDEADBEEF);
@@ -508,8 +508,8 @@ test_nvme_pcie_qpair_build_metadata(void)
 	qpair->ctrlr = &ctrlr;
 
 	req.payload = NVME_PAYLOAD_CONTIG(NULL, (void *)0xDEADBEE0);
-	req.md_offset = 0;
-	req.md_size = 4096;
+	req.payload.md_offset = 0;
+	req.payload.md_size = 4096;
 	/* The nvme_pcie_qpair_build_metadata() function expects the cmd.psdt
 	 * is set to SPDK_NVME_PSDT_SGL_MPTR_CONTIG, and then if metadata is
 	 * built using SGL, cmd.psdt is changed to SPDK_NVME_PSDT_SGL_MPTR_SGL
@@ -617,7 +617,7 @@ test_nvme_pcie_qpair_build_prps_sgl_request(void)
 	tr.req = &req;
 	qpair.ctrlr = &ctrlr;
 	req.payload = NVME_PAYLOAD_SGL(nvme_pcie_ut_reset_sgl, nvme_pcie_ut_next_sge, &bio, NULL);
-	req.payload_size = 4096;
+	req.payload.payload_size = 4096;
 	ctrlr.page_size = 4096;
 	bio.iovs[0].iov_base = (void *)0x100000;
 	bio.iovs[0].iov_len = 4096;
@@ -646,7 +646,7 @@ test_nvme_pcie_qpair_build_hw_sgl_request(void)
 	g_vtophys_size = 4096;
 
 	/* Multiple vectors, 2k + 4k + 2k */
-	req.payload_size = 8192;
+	req.payload.payload_size = 8192;
 	bio.iovpos = 3;
 	bio.iovs[0].iov_base = (void *)0xDBADBEE0;
 	bio.iovs[0].iov_len = 2048;
@@ -680,7 +680,7 @@ test_nvme_pcie_qpair_build_hw_sgl_request(void)
 	memset(&req, 0, sizeof(req));
 	req.payload = NVME_PAYLOAD_SGL(nvme_pcie_ut_reset_sgl, nvme_pcie_ut_next_sge, &bio, NULL);
 	req.cmd.opc = SPDK_NVME_OPC_WRITE;
-	req.payload_size = 4096;
+	req.payload.payload_size = 4096;
 	bio.iovpos = 1;
 	bio.iovs[0].iov_base = (void *)0xDBADBEE0;
 	bio.iovs[0].iov_len = 4096;
@@ -713,7 +713,7 @@ test_nvme_pcie_qpair_build_contig_request(void)
 	/* 1 prp, 4k-aligned */
 	prp_list_prep(&tr, &req, NULL, &pqpair.qpair);
 	req.payload = NVME_PAYLOAD_CONTIG((void *)0x100000, NULL);
-	req.payload_size = 0x1000;
+	req.payload.payload_size = 0x1000;
 
 	rc = nvme_pcie_qpair_build_contig_request(&pqpair.qpair, &req, &tr, true);
 	CU_ASSERT(rc == 0);
@@ -722,8 +722,8 @@ test_nvme_pcie_qpair_build_contig_request(void)
 	/* 2 prps, non-4K-aligned */
 	prp_list_prep(&tr, &req, NULL, &pqpair.qpair);
 	req.payload = NVME_PAYLOAD_CONTIG((void *)0x100000, NULL);
-	req.payload_size = 0x1000;
-	req.payload_offset = 0x800;
+	req.payload.payload_size = 0x1000;
+	req.payload.payload_offset = 0x800;
 
 	rc = nvme_pcie_qpair_build_contig_request(&pqpair.qpair, &req, &tr, true);
 	CU_ASSERT(rc == 0);
@@ -733,7 +733,7 @@ test_nvme_pcie_qpair_build_contig_request(void)
 	/* 3 prps, 4k-aligned */
 	prp_list_prep(&tr, &req, NULL, &pqpair.qpair);
 	req.payload = NVME_PAYLOAD_CONTIG((void *)0x100000, NULL);
-	req.payload_size = 0x3000;
+	req.payload.payload_size = 0x3000;
 
 	rc = nvme_pcie_qpair_build_contig_request(&pqpair.qpair, &req, &tr, true);
 	CU_ASSERT(rc == 0);
@@ -745,7 +745,7 @@ test_nvme_pcie_qpair_build_contig_request(void)
 	/* address not dword aligned */
 	prp_list_prep(&tr, &req, NULL, &pqpair.qpair);
 	req.payload = NVME_PAYLOAD_CONTIG((void *)0x100001, NULL);
-	req.payload_size = 0x3000;
+	req.payload.payload_size = 0x3000;
 	req.qpair = &pqpair.qpair;
 	TAILQ_INIT(&pqpair.outstanding_tr);
 	TAILQ_INSERT_TAIL(&pqpair.outstanding_tr, &tr, tq_list);

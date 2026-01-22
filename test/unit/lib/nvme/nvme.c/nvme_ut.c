@@ -633,10 +633,10 @@ test_nvme_user_copy_cmd_complete(void)
 	req.user_buffer = user_buffer;
 	SPDK_CU_ASSERT_FATAL(req.user_buffer != NULL);
 	memset(req.user_buffer, 0, buff_size);
-	req.payload_size = buff_size;
 	buff = spdk_zmalloc(buff_size, 0x100, NULL, SPDK_ENV_LCORE_ID_ANY, SPDK_MALLOC_DMA);
 	SPDK_CU_ASSERT_FATAL(buff != NULL);
 	req.payload = NVME_PAYLOAD_CONTIG(buff, NULL);
+	req.payload.payload_size = buff_size;
 	memcpy(buff, &test_data, buff_size);
 	req.cmd.opc = SPDK_NVME_OPC_GET_LOG_PAGE;
 	req.pid = getpid();
@@ -663,6 +663,7 @@ test_nvme_user_copy_cmd_complete(void)
 	buff = spdk_zmalloc(buff_size, 0x100, NULL, SPDK_ENV_LCORE_ID_ANY, SPDK_MALLOC_DMA);
 	SPDK_CU_ASSERT_FATAL(buff != NULL);
 	req.payload = NVME_PAYLOAD_CONTIG(buff, NULL);
+	req.payload.payload_size = buff_size;
 	memcpy(buff, &test_data, buff_size);
 	req.cmd.opc = SPDK_NVME_OPC_SET_FEATURES;
 	nvme_user_copy_cmd_complete(&req, &cpl);
@@ -727,6 +728,8 @@ test_nvme_allocate_request(void)
 	qpair.num_outstanding_reqs = 0;
 
 	/* Test trying to allocate a request when no requests are available */
+	payload.payload_size = payload_struct_size;
+	payload.md_size = 0;
 	req = nvme_allocate_request(&qpair, &payload, payload_struct_size, 0,
 				    cb_fn, cb_arg);
 	CU_ASSERT(req == NULL);
@@ -734,6 +737,8 @@ test_nvme_allocate_request(void)
 
 	/* put a dummy on the queue, and then allocate one */
 	STAILQ_INSERT_HEAD(&qpair.free_req, &dummy_req, stailq);
+	payload.payload_size = payload_struct_size;
+	payload.md_size = 0;
 	req = nvme_allocate_request(&qpair, &payload, payload_struct_size, 0,
 				    cb_fn, cb_arg);
 
@@ -743,7 +748,7 @@ test_nvme_allocate_request(void)
 	CU_ASSERT(req->cb_fn == cb_fn);
 	CU_ASSERT(req->cb_arg == cb_arg);
 	CU_ASSERT(memcmp(&req->payload, &payload, payload_struct_size) == 0);
-	CU_ASSERT(req->payload_size == payload_struct_size);
+	CU_ASSERT(req->payload.payload_size == payload_struct_size);
 	CU_ASSERT(req->pid == getpid());
 }
 
