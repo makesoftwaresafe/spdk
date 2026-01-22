@@ -61,7 +61,7 @@ static struct nvme_request *g_request;
 int
 nvme_qpair_submit_request(struct spdk_nvme_qpair *qpair, struct nvme_request *req)
 {
-	CU_ASSERT(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_CONTIG);
+	CU_ASSERT(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_CONTIG);
 
 	g_request = req;
 	memcpy(&g_nvmf_data, req->payload.contig_or_cb_arg, sizeof(g_nvmf_data));

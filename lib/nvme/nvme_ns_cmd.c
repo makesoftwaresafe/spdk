@@ -484,7 +484,7 @@ _nvme_ns_cmd_rw(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair, struct n
 		return _nvme_ns_cmd_split_request(ns, qpair, lba, lba_count,
 						  opc, io_flags, req, sectors_per_max_io, 0, apptag_mask,
 						  apptag, cdw13);
-	} else if (nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_SGL && check_sgl) {
+	} else if (nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_SGL && check_sgl) {
 		if (ns->ctrlr->flags & SPDK_NVME_CTRLR_SGL_SUPPORTED) {
 			return _nvme_ns_cmd_split_request_sgl(ns, qpair, lba, lba_count, opc, io_flags,
 							      req, apptag_mask, apptag, cdw13);

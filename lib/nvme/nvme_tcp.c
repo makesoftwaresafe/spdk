@@ -801,7 +801,7 @@ nvme_tcp_build_contig_request(struct nvme_tcp_qpair *tqpair, struct nvme_tcp_req
 
 	NVME_TQPAIR_DEBUGLOG(tqpair, "enter\n");
 
-	assert(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_CONTIG);
+	assert(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_CONTIG);
 	rc = nvme_tcp_try_memory_translation(tcp_req, &addr, length);
 	if (spdk_unlikely(rc)) {
 		return rc;
@@ -826,7 +826,7 @@ nvme_tcp_build_sgl_request(struct nvme_tcp_qpair *tqpair, struct nvme_tcp_req *t
 	NVME_TQPAIR_DEBUGLOG(tqpair, "enter\n");
 
 	assert(req->payload.payload_size != 0);
-	assert(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_SGL);
+	assert(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_SGL);
 	assert(req->payload.reset_sgl_fn != NULL);
 	assert(req->payload.next_sge_fn != NULL);
 	req->payload.reset_sgl_fn(req->payload.contig_or_cb_arg, req->payload.payload_offset);
@@ -895,11 +895,11 @@ nvme_tcp_req_init(struct nvme_tcp_qpair *tqpair, struct nvme_request *req,
 
 	/* For c2h delay filling in the iov until the data arrives.
 	 * For h2c some delay is also possible if data doesn't fit into cmd capsule (not implemented). */
-	if (nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_CONTIG) {
+	if (nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_CONTIG) {
 		if (xfer != SPDK_NVME_DATA_CONTROLLER_TO_HOST) {
 			rc = nvme_tcp_build_contig_request(tqpair, tcp_req);
 		}
-	} else if (nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_SGL) {
+	} else if (nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_SGL) {
 		if (xfer != SPDK_NVME_DATA_CONTROLLER_TO_HOST) {
 			rc = nvme_tcp_build_sgl_request(tqpair, tcp_req);
 		}
@@ -1757,10 +1757,10 @@ nvme_tcp_c2h_data_hdr_handle(struct nvme_tcp_qpair *tqpair, struct nvme_tcp_pdu 
 
 	}
 
-	if (nvme_payload_type(&tcp_req->req->payload) == NVME_PAYLOAD_TYPE_CONTIG) {
+	if (nvme_req_payload_type(tcp_req->req) == NVME_PAYLOAD_TYPE_CONTIG) {
 		rc = nvme_tcp_build_contig_request(tqpair, tcp_req);
 	} else {
-		assert(nvme_payload_type(&tcp_req->req->payload) == NVME_PAYLOAD_TYPE_SGL);
+		assert(nvme_req_payload_type(tcp_req->req) == NVME_PAYLOAD_TYPE_SGL);
 		rc = nvme_tcp_build_sgl_request(tqpair, tcp_req);
 	}
 

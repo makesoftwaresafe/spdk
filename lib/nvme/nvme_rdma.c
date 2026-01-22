@@ -1557,7 +1557,7 @@ nvme_rdma_build_contig_inline_request(struct nvme_rdma_qpair *rqpair,
 	int rc;
 
 	assert(ctx.length != 0);
-	assert(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_CONTIG);
+	assert(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_CONTIG);
 
 	rc = nvme_rdma_get_memory_translation(req, rqpair, &ctx);
 	if (spdk_unlikely(rc)) {
@@ -1606,7 +1606,7 @@ nvme_rdma_build_contig_request(struct nvme_rdma_qpair *rqpair,
 	int rc;
 
 	assert(req->payload.payload_size != 0);
-	assert(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_CONTIG);
+	assert(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_CONTIG);
 
 	if (spdk_unlikely(req->payload.payload_size > NVME_RDMA_MAX_KEYED_SGL_LENGTH)) {
 		NVME_RQPAIR_ERRLOG(rqpair, "SGL length %u exceeds max keyed SGL block size %u\n",
@@ -1640,7 +1640,7 @@ nvme_rdma_build_sgl_request(struct nvme_rdma_qpair *rqpair,
 	int rc, max_num_sgl, num_sgl_desc;
 
 	assert(req->payload.payload_size != 0);
-	assert(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_SGL);
+	assert(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_SGL);
 	assert(req->payload.reset_sgl_fn != NULL);
 	assert(req->payload.next_sge_fn != NULL);
 	req->payload.reset_sgl_fn(req->payload.contig_or_cb_arg, req->payload.payload_offset);
@@ -1742,7 +1742,7 @@ nvme_rdma_build_sgl_inline_request(struct nvme_rdma_qpair *rqpair,
 	int rc;
 
 	assert(req->payload.payload_size != 0);
-	assert(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_SGL);
+	assert(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_SGL);
 	assert(req->payload.reset_sgl_fn != NULL);
 	assert(req->payload.next_sge_fn != NULL);
 	req->payload.reset_sgl_fn(req->payload.contig_or_cb_arg, req->payload.payload_offset);
@@ -1872,7 +1872,7 @@ nvme_rdma_apply_accel_sequence(struct nvme_rdma_qpair *rqpair, struct nvme_reque
 	int rc;
 
 	NVME_RQPAIR_DEBUGLOG(rqpair, "req %p, start accel seq %p\n", rdma_req, accel_seq);
-	if (nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_SGL) {
+	if (nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_SGL) {
 		void *addr;
 		uint32_t sge_length, payload_size;
 
@@ -2001,7 +2001,7 @@ nvme_rdma_req_init(struct nvme_rdma_qpair *rqpair, struct spdk_nvme_rdma_req *rd
 	bool icd_supported;
 	int rc = -1;
 
-	payload_type = nvme_payload_type(&req->payload);
+	payload_type = nvme_req_payload_type(req);
 	/*
 	 * Check if icdoff is non zero, to avoid interop conflicts with
 	 * targets with non-zero icdoff.  Both SPDK and the Linux kernel

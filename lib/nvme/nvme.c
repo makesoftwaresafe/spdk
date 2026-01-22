@@ -331,7 +331,7 @@ nvme_user_copy_cmd_complete(void *arg, const struct spdk_nvme_cpl *cpl)
 
 	if (req->user_buffer && req->payload.payload_size) {
 		/* Copy back to the user buffer */
-		assert(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_CONTIG);
+		assert(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_CONTIG);
 		xfer = spdk_nvme_opc_get_data_transfer(req->cmd.opc);
 		if (xfer == SPDK_NVME_DATA_CONTROLLER_TO_HOST ||
 		    xfer == SPDK_NVME_DATA_BIDIRECTIONAL) {

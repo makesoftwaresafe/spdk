@@ -705,7 +705,7 @@ test_nvme_allocate_request_null(void)
 	CU_ASSERT(req->cb_fn == cb_fn);
 	CU_ASSERT(req->cb_arg == cb_arg);
 	CU_ASSERT(req->pid == getpid());
-	CU_ASSERT(nvme_payload_type(&req->payload) == NVME_PAYLOAD_TYPE_CONTIG);
+	CU_ASSERT(nvme_req_payload_type(req) == NVME_PAYLOAD_TYPE_CONTIG);
 	CU_ASSERT(req->payload.md == NULL);
 	CU_ASSERT(req->payload.contig_or_cb_arg == NULL);
 }
