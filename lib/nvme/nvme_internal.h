@@ -300,7 +300,14 @@ struct nvme_request {
 	 * True if the request is in the queued_req list.
 	 */
 	uint8_t				queued : 1;
-	uint8_t				reserved : 6;
+	/**
+	 * The type of the payload for this request, refer to enum nvme_payload_type
+	 */
+	uint8_t				payload_type : 2;
+	/**
+	 * Reserved bits.
+	 */
+	uint8_t				reserved : 4;
 
 	/**
 	 * Number of children requests still outstanding for this
@@ -390,7 +397,7 @@ struct nvme_request {
 
 static inline enum nvme_payload_type
 nvme_req_payload_type(const struct nvme_request *req) {
-	return req->payload.reset_sgl_fn ? NVME_PAYLOAD_TYPE_SGL : NVME_PAYLOAD_TYPE_CONTIG;
+	return req->payload_type;
 }
 
 struct nvme_completion_poll_status {
@@ -1491,7 +1498,7 @@ nvme_request_clear(struct nvme_request *req)
 	memset(req, 0, offsetof(struct nvme_request, num_children));
 }
 
-#define NVME_INIT_REQUEST(req, _cb_fn, _cb_arg, _payload, _payload_size, _md_size)	\
+#define NVME_INIT_REQUEST(req, _cb_fn, _cb_arg, _payload, _payload_size, _md_size, _payload_type)	\
 	do {							\
 		nvme_request_clear(req);			\
 		req->cb_fn = _cb_fn;				\
@@ -1502,6 +1509,7 @@ nvme_request_clear(struct nvme_request *req)
 		req->pid = g_spdk_nvme_pid;			\
 		req->submit_tick = 0;				\
 		req->accel_sequence = NULL;			\
+		req->payload_type = _payload_type;		\
 	} while (0);
 
 static inline struct nvme_request *
@@ -1535,7 +1543,7 @@ nvme_allocate_request_contig(struct spdk_nvme_qpair *qpair,
 		return NULL;
 	}
 
-	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, payload_size, 0);
+	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, payload_size, 0, NVME_PAYLOAD_TYPE_CONTIG);
 	return req;
 }
 

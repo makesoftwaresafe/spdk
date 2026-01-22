@@ -637,6 +637,7 @@ test_nvme_user_copy_cmd_complete(void)
 	SPDK_CU_ASSERT_FATAL(buff != NULL);
 	req.payload = NVME_PAYLOAD_CONTIG(buff, NULL);
 	req.payload.payload_size = buff_size;
+	req.payload_type = NVME_PAYLOAD_TYPE_CONTIG;
 	memcpy(buff, &test_data, buff_size);
 	req.cmd.opc = SPDK_NVME_OPC_GET_LOG_PAGE;
 	req.pid = getpid();
@@ -664,6 +665,7 @@ test_nvme_user_copy_cmd_complete(void)
 	SPDK_CU_ASSERT_FATAL(buff != NULL);
 	req.payload = NVME_PAYLOAD_CONTIG(buff, NULL);
 	req.payload.payload_size = buff_size;
+	req.payload_type = NVME_PAYLOAD_TYPE_CONTIG;
 	memcpy(buff, &test_data, buff_size);
 	req.cmd.opc = SPDK_NVME_OPC_SET_FEATURES;
 	nvme_user_copy_cmd_complete(&req, &cpl);
@@ -741,7 +743,7 @@ test_nvme_allocate_request(void)
 	req = nvme_allocate_request(&qpair);
 	SPDK_CU_ASSERT_FATAL(req != NULL);
 
-	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, payload_struct_size, 0);
+	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, payload_struct_size, 0, NVME_PAYLOAD_TYPE_CONTIG);
 	/* all the req elements should now match the passed in parameters */
 	CU_ASSERT(qpair.num_outstanding_reqs == 1);
 	CU_ASSERT(req->cb_fn == cb_fn);

@@ -538,7 +538,7 @@ nvme_fabric_qpair_connect_async(struct spdk_nvme_qpair *qpair, uint32_t num_entr
 	assert(qpair->reserved_req != NULL);
 	req = qpair->reserved_req;
 	NVME_INIT_REQUEST(req, nvme_completion_poll_cb, status, NVME_PAYLOAD_CONTIG(nvmf_data, NULL),
-			  sizeof(*nvmf_data), 0);
+			  sizeof(*nvmf_data), 0, NVME_PAYLOAD_TYPE_CONTIG);
 
 	memcpy(&req->cmd, &cmd, sizeof(cmd));
 

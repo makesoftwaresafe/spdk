@@ -79,7 +79,8 @@ _nvme_ocssd_ns_cmd_vector_rw_with_md(struct spdk_nvme_ns *ns,
 	if (req == NULL) {
 		return -ENOMEM;
 	}
-	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, num_lbas * ns->sector_size, num_lbas * ns->md_size);
+	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, num_lbas * ns->sector_size, num_lbas * ns->md_size,
+			  NVME_PAYLOAD_TYPE_CONTIG);
 
 	cmd = &req->cmd;
 	cmd->opc = opc;

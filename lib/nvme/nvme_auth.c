@@ -672,7 +672,7 @@ nvme_auth_submit_request(struct spdk_nvme_qpair *qpair,
 			      spdk_get_ticks();
 	status->done = false;
 	NVME_INIT_REQUEST(req, nvme_completion_poll_cb, status,
-			  NVME_PAYLOAD_CONTIG(status->dma_data, NULL), len, 0);
+			  NVME_PAYLOAD_CONTIG(status->dma_data, NULL), len, 0, NVME_PAYLOAD_TYPE_CONTIG);
 	switch (type) {
 	case SPDK_NVMF_FABRIC_COMMAND_AUTHENTICATION_SEND:
 		scmd.opcode = SPDK_NVME_OPC_FABRIC;

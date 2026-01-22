@@ -256,6 +256,7 @@ test_nvme_tcp_build_sgl_request(void)
 	tcp_req.req = &req;
 
 	req.payload = NVME_PAYLOAD_SGL(nvme_tcp_ut_reset_sgl, nvme_tcp_ut_next_sge, &bio, NULL);
+	req.payload_type = NVME_PAYLOAD_TYPE_SGL;
 	req.qpair = &tqpair.qpair;
 
 	for (i = 0; i < NVME_TCP_MAX_SGL_DESCRIPTORS; i++) {
@@ -547,6 +548,7 @@ test_nvme_tcp_req_init(void)
 
 	tcp_req.cid = 1;
 	req.payload = NVME_PAYLOAD_SGL(nvme_tcp_ut_reset_sgl, nvme_tcp_ut_next_sge, &bio, NULL);
+	req.payload_type = NVME_PAYLOAD_TYPE_SGL;
 	req.payload.payload_offset = 0;
 	req.payload.payload_size = 4096;
 	ctrlr.max_sges = NVME_TCP_MAX_SGL_DESCRIPTORS;
@@ -557,7 +559,6 @@ test_nvme_tcp_req_init(void)
 
 	/* Test case1: payload type SGL. Expect: PASS */
 	req.cmd.opc = SPDK_NVME_DATA_HOST_TO_CONTROLLER;
-	req.payload.reset_sgl_fn = nvme_tcp_ut_reset_sgl;
 
 	rc = nvme_tcp_req_init(&tqpair, &req, &tcp_req);
 	CU_ASSERT(rc == 0);
@@ -578,6 +579,7 @@ test_nvme_tcp_req_init(void)
 	memset(&tcp_req, 0, sizeof(tcp_req));
 	tcp_req.cid = 1;
 	req.payload = NVME_PAYLOAD_CONTIG(&bio, NULL);
+	req.payload_type = NVME_PAYLOAD_TYPE_CONTIG;
 	req.cmd.opc = SPDK_NVME_DATA_HOST_TO_CONTROLLER;
 
 	rc = nvme_tcp_req_init(&tqpair, &req, &tcp_req);
@@ -1362,6 +1364,7 @@ test_nvme_tcp_capsule_resp_hdr_handle(void)
 	req.qpair = &tqpair.qpair;
 	req.qpair->ctrlr = &ctrlr;
 	req.payload = NVME_PAYLOAD_CONTIG(NULL, NULL);
+	req.payload_type = NVME_PAYLOAD_TYPE_CONTIG;
 
 	rc = nvme_tcp_alloc_reqs(&tqpair);
 	SPDK_CU_ASSERT_FATAL(rc == 0);
@@ -1867,6 +1870,7 @@ test_nvme_tcp_qpair_submit_request(void)
 	req.qpair = &tqpair->qpair;
 	req.cmd.opc = SPDK_NVME_DATA_HOST_TO_CONTROLLER;
 	req.payload = NVME_PAYLOAD_SGL(nvme_tcp_ut_reset_sgl, nvme_tcp_ut_next_sge, &bio, NULL);
+	req.payload_type = NVME_PAYLOAD_TYPE_SGL;
 
 	/* Failed to construct request, because not enough max_sges */
 	req.qpair->ctrlr->max_sges = 1;
