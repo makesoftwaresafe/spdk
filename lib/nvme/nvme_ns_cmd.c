@@ -94,7 +94,7 @@ _nvme_add_child_request(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair,
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, child, lba, lba_count, opc, io_flags, apptag_mask, apptag, cdw13,
 			     check_sgl);
-	if (rc != 0) {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_request_free_children(parent);
 		nvme_free_request(child);
 		return rc;
@@ -523,16 +523,13 @@ spdk_nvme_ns_cmd_compare(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair,
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count,
 			     SPDK_NVME_OPC_COMPARE,
 			     io_flags, 0, 0, 0, false);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -561,16 +558,13 @@ spdk_nvme_ns_cmd_compare_with_md(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_COMPARE,
 			     io_flags, apptag_mask, apptag, 0, false);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -602,16 +596,13 @@ spdk_nvme_ns_cmd_comparev(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_COMPARE,
 			     io_flags, 0, 0, 0, true);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -644,16 +635,13 @@ spdk_nvme_ns_cmd_comparev_with_md(struct spdk_nvme_ns *ns, struct spdk_nvme_qpai
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_COMPARE,
 			     io_flags, apptag_mask, apptag, 0, true);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -680,16 +668,13 @@ spdk_nvme_ns_cmd_read(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair, vo
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count,
 			     SPDK_NVME_OPC_READ, io_flags, 0, 0, 0, false);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -717,16 +702,13 @@ spdk_nvme_ns_cmd_read_with_md(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *q
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count,
 			     SPDK_NVME_OPC_READ, io_flags, apptag_mask, apptag, 0, false);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 static int
@@ -764,11 +746,8 @@ nvme_ns_cmd_rw_ext(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair, void 
 			     opts->apptag, 0, false);
 	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
 
 	return nvme_qpair_submit_request(qpair, req);
@@ -812,16 +791,13 @@ spdk_nvme_ns_cmd_readv(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair,
 	}
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_READ, io_flags, 0, 0, 0, true);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -853,16 +829,13 @@ spdk_nvme_ns_cmd_readv_with_md(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_READ, io_flags, apptag_mask,
 			     apptag, 0, true);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 static int
@@ -911,13 +884,10 @@ nvme_ns_cmd_rwv_ext(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair, uint
 		rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, opc, 0, 0, 0, 0, true);
 	}
 
-	if (rc != 0) {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
 
 	return nvme_qpair_submit_request(qpair, req);
@@ -957,16 +927,13 @@ spdk_nvme_ns_cmd_write(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair,
 	}
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_WRITE, io_flags, 0, 0, 0, false);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 static int
@@ -1018,28 +985,24 @@ nvme_ns_cmd_zone_append_with_md(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair 
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, zslba, lba_count, SPDK_NVME_OPC_ZONE_APPEND, io_flags,
 			     apptag_mask, apptag, 0, false);
-	if (rc == 0) {
-		/*
-		 * Zone append commands cannot be split (num_children has to be 0).
-		 * For NVME_PAYLOAD_TYPE_CONTIG, _nvme_ns_cmd_rw() should never cause a split
-		 * to happen, since a too large request would have already been failed by
-		 * nvme_ns_cmd_check_zone_append(), since zasl <= mdts.
-		 */
-		assert(req->num_children == 0);
-		if (req->num_children) {
-			nvme_request_free_children(req);
-			nvme_free_request(req);
-			return -EINVAL;
-		}
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+	/*
+	 * Zone append commands cannot be split (num_children has to be 0).
+	 * For NVME_PAYLOAD_TYPE_CONTIG, _nvme_ns_cmd_rw() should never cause a split
+	 * to happen, since a too large request would have already been failed by
+	 * nvme_ns_cmd_check_zone_append(), since zasl <= mdts.
+	 */
+	assert(req->num_children == 0);
+	if (req->num_children) {
+		nvme_request_free_children(req);
+		nvme_free_request(req);
+		return -EINVAL;
+	}
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -1076,33 +1039,31 @@ nvme_ns_cmd_zone_appendv_with_md(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, zslba, lba_count, SPDK_NVME_OPC_ZONE_APPEND, io_flags,
 			     apptag_mask, apptag, 0, true);
-	if (rc == 0) {
-		/*
-		 * Zone append commands cannot be split (num_children has to be 0).
-		 * For NVME_PAYLOAD_TYPE_SGL, _nvme_ns_cmd_rw() can cause a split.
-		 * However, _nvme_ns_cmd_split_request_sgl() and _nvme_ns_cmd_split_request_prp()
-		 * do not always cause a request to be split. These functions verify payload size,
-		 * verify num sge < max_sge, and verify SGE alignment rules (in case of PRPs).
-		 * If any of the verifications fail, they will split the request.
-		 * In our case, a split is very unlikely, since we already verified the size using
-		 * nvme_ns_cmd_check_zone_append(), however, we still need to call these functions
-		 * in order to perform the verification part. If they do cause a split, we return
-		 * an error here. For proper requests, these functions will never cause a split.
-		 */
-		if (req->num_children) {
-			nvme_request_free_children(req);
-			nvme_free_request(req);
-			return -EINVAL;
-		}
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	/*
+	 * Zone append commands cannot be split (num_children has to be 0).
+	 * For NVME_PAYLOAD_TYPE_SGL, _nvme_ns_cmd_rw() can cause a split.
+	 * However, _nvme_ns_cmd_split_request_sgl() and _nvme_ns_cmd_split_request_prp()
+	 * do not always cause a request to be split. These functions verify payload size,
+	 * verify num sge < max_sge, and verify SGE alignment rules (in case of PRPs).
+	 * If any of the verifications fail, they will split the request.
+	 * In our case, a split is very unlikely, since we already verified the size using
+	 * nvme_ns_cmd_check_zone_append(), however, we still need to call these functions
+	 * in order to perform the verification part. If they do cause a split, we return
+	 * an error here. For proper requests, these functions will never cause a split.
+	 */
+	if (req->num_children) {
+		nvme_request_free_children(req);
+		nvme_free_request(req);
+		return -EINVAL;
+	}
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -1129,16 +1090,13 @@ spdk_nvme_ns_cmd_write_with_md(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_WRITE, io_flags, apptag_mask,
 			     apptag, 0, false);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -1179,16 +1137,13 @@ spdk_nvme_ns_cmd_writev(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair *qpair,
 	}
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_WRITE, io_flags, 0, 0, 0, true);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
@@ -1220,16 +1175,13 @@ spdk_nvme_ns_cmd_writev_with_md(struct spdk_nvme_ns *ns, struct spdk_nvme_qpair 
 
 	rc = _nvme_ns_cmd_rw(ns, qpair, req, lba, lba_count, SPDK_NVME_OPC_WRITE, io_flags, apptag_mask,
 			     apptag, 0, true);
-	if (rc == 0) {
-		return nvme_qpair_submit_request(qpair, req);
-	} else {
+	if (spdk_unlikely(rc != 0)) {
 		nvme_free_request(req);
-		return nvme_ns_map_failure_rc(lba_count,
-					      ns->sectors_per_max_io,
-					      ns->sectors_per_stripe,
-					      qpair->ctrlr->opts.io_queue_requests,
-					      rc);
+		return nvme_ns_map_failure_rc(lba_count, ns->sectors_per_max_io, ns->sectors_per_stripe,
+					      qpair->ctrlr->opts.io_queue_requests, rc);
 	}
+
+	return nvme_qpair_submit_request(qpair, req);
 }
 
 int
