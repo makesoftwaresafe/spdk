@@ -635,7 +635,7 @@ test_nvme_user_copy_cmd_complete(void)
 	memset(req.user_buffer, 0, buff_size);
 	buff = spdk_zmalloc(buff_size, 0x100, NULL, SPDK_ENV_LCORE_ID_ANY, SPDK_MALLOC_DMA);
 	SPDK_CU_ASSERT_FATAL(buff != NULL);
-	req.payload = NVME_PAYLOAD_CONTIG(buff, NULL);
+	req.payload.contig_or_cb_arg = buff;
 	req.payload.payload_size = buff_size;
 	req.payload_type = NVME_PAYLOAD_TYPE_CONTIG;
 	memcpy(buff, &test_data, buff_size);
@@ -663,7 +663,7 @@ test_nvme_user_copy_cmd_complete(void)
 	memset(req.user_buffer, 0, buff_size);
 	buff = spdk_zmalloc(buff_size, 0x100, NULL, SPDK_ENV_LCORE_ID_ANY, SPDK_MALLOC_DMA);
 	SPDK_CU_ASSERT_FATAL(buff != NULL);
-	req.payload = NVME_PAYLOAD_CONTIG(buff, NULL);
+	req.payload.contig_or_cb_arg = buff;
 	req.payload.payload_size = buff_size;
 	req.payload_type = NVME_PAYLOAD_TYPE_CONTIG;
 	memcpy(buff, &test_data, buff_size);
@@ -716,39 +716,31 @@ static void
 test_nvme_allocate_request(void)
 {
 	struct spdk_nvme_qpair qpair;
-	struct nvme_payload payload;
-	uint32_t payload_struct_size = sizeof(payload);
+	uint32_t payload_struct_size = sizeof(struct nvme_payload);
 	spdk_nvme_cmd_cb cb_fn = (spdk_nvme_cmd_cb)0x1234;
 	void *cb_arg = (void *)0x6789;
 	struct nvme_request *req = NULL;
 	struct nvme_request dummy_req;
 
-	/* Fill the whole payload struct with a known pattern */
-	memset(&payload, 0x5a, payload_struct_size);
 	STAILQ_INIT(&qpair.free_req);
 	STAILQ_INIT(&qpair.queued_req);
 	qpair.num_outstanding_reqs = 0;
 
 	/* Test trying to allocate a request when no requests are available */
-	payload.payload_size = payload_struct_size;
-	payload.md_size = 0;
 	req = nvme_allocate_request(&qpair);
 	CU_ASSERT(req == NULL);
 	CU_ASSERT(qpair.num_outstanding_reqs == 0);
 
 	/* put a dummy on the queue, and then allocate one */
 	STAILQ_INSERT_HEAD(&qpair.free_req, &dummy_req, stailq);
-	payload.payload_size = payload_struct_size;
-	payload.md_size = 0;
 	req = nvme_allocate_request(&qpair);
 	SPDK_CU_ASSERT_FATAL(req != NULL);
 
-	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, payload_struct_size, 0, NVME_PAYLOAD_TYPE_CONTIG);
+	NVME_INIT_REQUEST_CONTIG(req, cb_fn, cb_arg, NULL, NULL, payload_struct_size, 0, 0, 0);
 	/* all the req elements should now match the passed in parameters */
 	CU_ASSERT(qpair.num_outstanding_reqs == 1);
 	CU_ASSERT(req->cb_fn == cb_fn);
 	CU_ASSERT(req->cb_arg == cb_arg);
-	CU_ASSERT(memcmp(&req->payload, &payload, payload_struct_size) == 0);
 	CU_ASSERT(req->payload.payload_size == payload_struct_size);
 	CU_ASSERT(req->pid == getpid());
 }

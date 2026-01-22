@@ -13,18 +13,16 @@ spdk_nvme_ctrlr_io_cmd_raw_no_payload_build(struct spdk_nvme_ctrlr *ctrlr,
 		spdk_nvme_cmd_cb cb_fn, void *cb_arg)
 {
 	struct nvme_request *req;
-	struct nvme_payload payload;
 
 	if (ctrlr->trid.trtype != SPDK_NVME_TRANSPORT_PCIE) {
 		return -EINVAL;
 	}
 
-	memset(&payload, 0, sizeof(payload));
 	req = nvme_allocate_request(qpair);
 	if (req == NULL) {
 		return -ENOMEM;
 	}
-	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, 0, 0, NVME_PAYLOAD_TYPE_CONTIG);
+	NVME_INIT_REQUEST_CONTIG(req, cb_fn, cb_arg, NULL, NULL, 0, 0, 0, 0);
 
 	memcpy(&req->cmd, cmd, sizeof(req->cmd));
 
@@ -59,10 +57,7 @@ spdk_nvme_ctrlr_cmd_io_raw_with_md(struct spdk_nvme_ctrlr *ctrlr,
 				   spdk_nvme_cmd_cb cb_fn, void *cb_arg)
 {
 	struct nvme_request *req;
-	struct nvme_payload payload;
 	uint32_t md_len = 0;
-
-	payload = NVME_PAYLOAD_CONTIG(buf, md_buf);
 
 	/* Calculate metadata length */
 	if (md_buf) {
@@ -77,7 +72,7 @@ spdk_nvme_ctrlr_cmd_io_raw_with_md(struct spdk_nvme_ctrlr *ctrlr,
 	if (req == NULL) {
 		return -ENOMEM;
 	}
-	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, len, md_len, NVME_PAYLOAD_TYPE_CONTIG);
+	NVME_INIT_REQUEST_CONTIG(req, cb_fn, cb_arg, buf, md_buf, len, md_len, 0, 0);
 
 	memcpy(&req->cmd, cmd, sizeof(req->cmd));
 
@@ -94,14 +89,11 @@ spdk_nvme_ctrlr_cmd_iov_raw_with_md(struct spdk_nvme_ctrlr *ctrlr,
 				    spdk_nvme_req_next_sge_cb next_sge_fn)
 {
 	struct nvme_request *req;
-	struct nvme_payload payload;
 	uint32_t md_len = 0;
 
 	if (reset_sgl_fn == NULL || next_sge_fn == NULL) {
 		return -EINVAL;
 	}
-
-	payload = NVME_PAYLOAD_SGL(reset_sgl_fn, next_sge_fn, cb_arg, md_buf);
 
 	/* Calculate metadata length */
 	if (md_buf) {
@@ -116,7 +108,8 @@ spdk_nvme_ctrlr_cmd_iov_raw_with_md(struct spdk_nvme_ctrlr *ctrlr,
 	if (req == NULL) {
 		return -ENOMEM;
 	}
-	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, len, md_len, NVME_PAYLOAD_TYPE_SGL);
+	NVME_INIT_REQUEST_SGL(req, cb_fn, cb_arg, reset_sgl_fn, next_sge_fn, cb_arg, md_buf, len, md_len, 0,
+			      0);
 
 	memcpy(&req->cmd, cmd, sizeof(req->cmd));
 

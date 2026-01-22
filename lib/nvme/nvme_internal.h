@@ -264,22 +264,6 @@ struct nvme_payload {
 	uint32_t md_offset;
 };
 
-#define NVME_PAYLOAD_CONTIG(contig_, md_) \
-	(struct nvme_payload) { \
-		.reset_sgl_fn = NULL, \
-		.next_sge_fn = NULL, \
-		.contig_or_cb_arg = (contig_), \
-		.md = (md_), \
-	}
-
-#define NVME_PAYLOAD_SGL(reset_sgl_fn_, next_sge_fn_, cb_arg_, md_) \
-	(struct nvme_payload) { \
-		.reset_sgl_fn = (reset_sgl_fn_), \
-		.next_sge_fn = (next_sge_fn_), \
-		.contig_or_cb_arg = (cb_arg_), \
-		.md = (md_), \
-	}
-
 struct nvme_error_cmd {
 	bool				do_not_submit;
 	uint64_t			timeout_tsc;
@@ -1498,18 +1482,42 @@ nvme_request_clear(struct nvme_request *req)
 	memset(req, 0, offsetof(struct nvme_request, num_children));
 }
 
-#define NVME_INIT_REQUEST(req, _cb_fn, _cb_arg, _payload, _payload_size, _md_size, _payload_type)	\
+#define NVME_INIT_REQUEST_CONTIG(req, _cb_fn, _cb_arg, _buffer, _md, _payload_size, _md_size, _payload_offset, _md_offset)	\
 	do {							\
 		nvme_request_clear(req);			\
 		req->cb_fn = _cb_fn;				\
 		req->cb_arg = _cb_arg;				\
-		req->payload = _payload;			\
+		req->payload.contig_or_cb_arg = _buffer;	\
+		req->payload.md = _md;				\
 		req->payload.payload_size = _payload_size;	\
 		req->payload.md_size = _md_size;		\
+		req->payload.payload_offset = _payload_offset;	\
+		req->payload.md_offset = _md_offset;		\
+		req->payload.opts = NULL;			\
 		req->pid = g_spdk_nvme_pid;			\
 		req->submit_tick = 0;				\
 		req->accel_sequence = NULL;			\
-		req->payload_type = _payload_type;		\
+		req->payload_type = NVME_PAYLOAD_TYPE_CONTIG;	\
+	} while (0);
+
+#define NVME_INIT_REQUEST_SGL(req, _cb_fn, _cb_arg, _reset_sgl_fn, _next_sge_fn, _sg_cb_arg, _md, _payload_size, _md_size, _payload_offset, _md_offset)	\
+	do {							\
+		nvme_request_clear(req);			\
+		req->cb_fn = _cb_fn;				\
+		req->cb_arg = _cb_arg;				\
+		req->payload.reset_sgl_fn = _reset_sgl_fn;	\
+		req->payload.next_sge_fn = _next_sge_fn;	\
+		req->payload.contig_or_cb_arg = _sg_cb_arg;	\
+		req->payload.md = _md;				\
+		req->payload.payload_size = _payload_size;	\
+		req->payload.md_size = _md_size;		\
+		req->payload.payload_offset = _payload_offset;	\
+		req->payload.md_offset = _md_offset;		\
+		req->payload.opts = NULL;			\
+		req->pid = g_spdk_nvme_pid;			\
+		req->submit_tick = 0;				\
+		req->accel_sequence = NULL;			\
+		req->payload_type = NVME_PAYLOAD_TYPE_SGL;	\
 	} while (0);
 
 static inline struct nvme_request *
@@ -1534,16 +1542,13 @@ nvme_allocate_request_contig(struct spdk_nvme_qpair *qpair,
 			     spdk_nvme_cmd_cb cb_fn, void *cb_arg)
 {
 	struct nvme_request *req;
-	struct nvme_payload payload;
-
-	payload = NVME_PAYLOAD_CONTIG(buffer, NULL);
 
 	req = nvme_allocate_request(qpair);
 	if (req == NULL) {
 		return NULL;
 	}
 
-	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, payload_size, 0, NVME_PAYLOAD_TYPE_CONTIG);
+	NVME_INIT_REQUEST_CONTIG(req, cb_fn, cb_arg, buffer, NULL, payload_size, 0, 0, 0);
 	return req;
 }
 
