@@ -730,8 +730,7 @@ test_nvme_allocate_request(void)
 	/* Test trying to allocate a request when no requests are available */
 	payload.payload_size = payload_struct_size;
 	payload.md_size = 0;
-	req = nvme_allocate_request(&qpair, &payload, payload_struct_size, 0,
-				    cb_fn, cb_arg);
+	req = nvme_allocate_request(&qpair);
 	CU_ASSERT(req == NULL);
 	CU_ASSERT(qpair.num_outstanding_reqs == 0);
 
@@ -739,11 +738,11 @@ test_nvme_allocate_request(void)
 	STAILQ_INSERT_HEAD(&qpair.free_req, &dummy_req, stailq);
 	payload.payload_size = payload_struct_size;
 	payload.md_size = 0;
-	req = nvme_allocate_request(&qpair, &payload, payload_struct_size, 0,
-				    cb_fn, cb_arg);
-
-	/* all the req elements should now match the passed in parameters */
+	req = nvme_allocate_request(&qpair);
 	SPDK_CU_ASSERT_FATAL(req != NULL);
+
+	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, payload_struct_size, 0);
+	/* all the req elements should now match the passed in parameters */
 	CU_ASSERT(qpair.num_outstanding_reqs == 1);
 	CU_ASSERT(req->cb_fn == cb_fn);
 	CU_ASSERT(req->cb_arg == cb_arg);

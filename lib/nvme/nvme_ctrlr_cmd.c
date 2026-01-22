@@ -20,11 +20,11 @@ spdk_nvme_ctrlr_io_cmd_raw_no_payload_build(struct spdk_nvme_ctrlr *ctrlr,
 	}
 
 	memset(&payload, 0, sizeof(payload));
-	req = nvme_allocate_request(qpair, &payload, 0, 0, cb_fn, cb_arg);
-
+	req = nvme_allocate_request(qpair);
 	if (req == NULL) {
 		return -ENOMEM;
 	}
+	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, 0, 0);
 
 	memcpy(&req->cmd, cmd, sizeof(req->cmd));
 
@@ -73,10 +73,11 @@ spdk_nvme_ctrlr_cmd_io_raw_with_md(struct spdk_nvme_ctrlr *ctrlr,
 		md_len =  len / ns->sector_size * ns->md_size;
 	}
 
-	req = nvme_allocate_request(qpair, &payload, len, md_len, cb_fn, cb_arg);
+	req = nvme_allocate_request(qpair);
 	if (req == NULL) {
 		return -ENOMEM;
 	}
+	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, len, md_len);
 
 	memcpy(&req->cmd, cmd, sizeof(req->cmd));
 
@@ -111,10 +112,11 @@ spdk_nvme_ctrlr_cmd_iov_raw_with_md(struct spdk_nvme_ctrlr *ctrlr,
 		md_len = len / ns->sector_size * ns->md_size;
 	}
 
-	req = nvme_allocate_request(qpair, &payload, len, md_len, cb_fn, cb_arg);
+	req = nvme_allocate_request(qpair);
 	if (req == NULL) {
 		return -ENOMEM;
 	}
+	NVME_INIT_REQUEST(req, cb_fn, cb_arg, payload, len, md_len);
 
 	memcpy(&req->cmd, cmd, sizeof(req->cmd));
 
