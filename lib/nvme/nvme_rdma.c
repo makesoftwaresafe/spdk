@@ -1637,6 +1637,7 @@ nvme_rdma_build_sgl_request(struct nvme_rdma_qpair *rqpair,
 	struct nvme_rdma_memory_translation_ctx ctx;
 	uint32_t remaining_size;
 	uint32_t sge_length;
+	uint32_t descriptors_size;
 	int rc, max_num_sgl, num_sgl_desc;
 
 	assert(req->payload.payload_size != 0);
@@ -1678,9 +1679,15 @@ nvme_rdma_build_sgl_request(struct nvme_rdma_qpair *rqpair,
 		num_sgl_desc++;
 	} while (remaining_size > 0 && num_sgl_desc < max_num_sgl);
 
-
 	/* Should be impossible if we did our sgl checks properly up the stack, but do a sanity check here. */
 	if (spdk_unlikely(remaining_size > 0)) {
+		return -1;
+	}
+
+	descriptors_size = sizeof(struct spdk_nvme_sgl_descriptor) * num_sgl_desc;
+	if (spdk_unlikely(num_sgl_desc > 0 && descriptors_size > rqpair->qpair.ctrlr->ioccsz_bytes)) {
+		NVME_RQPAIR_ERRLOG(rqpair, "Size of SGL descriptors (%u) exceeds ICD (%u)\n", descriptors_size,
+				   rqpair->qpair.ctrlr->ioccsz_bytes);
 		return -1;
 	}
 
@@ -1711,13 +1718,7 @@ nvme_rdma_build_sgl_request(struct nvme_rdma_qpair *rqpair,
 		 * Otherwise, The SGL descriptor embedded in the command must point to the list of
 		 * SGL descriptors used to describe the operation. In that case it is a last segment descriptor.
 		 */
-		uint32_t descriptors_size = sizeof(struct spdk_nvme_sgl_descriptor) * num_sgl_desc;
 
-		if (spdk_unlikely(descriptors_size > rqpair->qpair.ctrlr->ioccsz_bytes)) {
-			NVME_RQPAIR_ERRLOG(rqpair, "Size of SGL descriptors (%u) exceeds ICD (%u)\n", descriptors_size,
-					   rqpair->qpair.ctrlr->ioccsz_bytes);
-			return -1;
-		}
 		rdma_req->send_sgl[0].length = sizeof(struct spdk_nvme_cmd) + descriptors_size;
 
 		req->cmd.dptr.sgl1.unkeyed.type = SPDK_NVME_SGL_TYPE_LAST_SEGMENT;
