@@ -1767,25 +1767,7 @@ nvme_rdma_build_sgl_inline_request(struct nvme_rdma_qpair *rqpair,
 		return -1;
 	}
 
-	rdma_req->send_sgl[1].addr = (uint64_t)ctx.addr;
-	rdma_req->send_sgl[1].length = (uint32_t)ctx.length;
-	rdma_req->send_sgl[1].lkey = ctx.lkey;
-
-	rdma_req->send_wr.num_sge = 2;
-
-	/* The first element of this SGL is pointing at an
-	 * spdk_nvmf_cmd object. For this particular command,
-	 * we only need the first 64 bytes corresponding to
-	 * the NVMe command. */
-	rdma_req->send_sgl[0].length = sizeof(struct spdk_nvme_cmd);
-
-	req->cmd.psdt = SPDK_NVME_PSDT_SGL_MPTR_CONTIG;
-	req->cmd.dptr.sgl1.unkeyed.type = SPDK_NVME_SGL_TYPE_DATA_BLOCK;
-	req->cmd.dptr.sgl1.unkeyed.subtype = SPDK_NVME_SGL_SUBTYPE_OFFSET;
-	req->cmd.dptr.sgl1.unkeyed.length = (uint32_t)ctx.length;
-	/* Inline only supported for icdoff == 0 currently.  This function will
-	 * not get called for controllers with other values. */
-	req->cmd.dptr.sgl1.address = (uint64_t)0;
+	nvme_rdma_configure_contig_inline_request(rdma_req, req, &ctx);
 
 	return 0;
 }
