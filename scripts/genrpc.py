@@ -66,7 +66,8 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
                 raise ValueError(f"In file {path}: RPC names {invalid} do not match available decoders: {struct_names}."
                                 "Update decoder names or exception list.")
             for name, fields in decoders:
-                c_code_methods[name] = re.findall(r'\{\s*"(\w+)",\s*(offsetof\(.+?\)|0),\s*(\w+)', fields, re.MULTILINE | re.DOTALL)
+                c_code_methods[name] = re.findall(r'\{\s*"(\w+)",\s*(offsetof\(.+?\)|0),\s*(\w+)(,\s*true)?',
+                                                  fields, re.MULTILINE | re.DOTALL)
                 if not c_code_methods[name]:
                     raise ValueError(f"In file {path}: could not parse fields for decoder '{name}' fields: '{fields}'. Fix decoder code.")
     if c_code_aliases != schema_aliases:
@@ -84,7 +85,7 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
             continue
         if not c_code_methods.get(decoder_name, {}):
             raise ValueError(f"Decoder of '{method['name']}' named '{decoder_name}' was not found. Update decoder names or exception list.")
-        cli_params = set(n for n, o, t in c_code_methods[decoder_name])
+        cli_params = set(n for n, _, _, _ in c_code_methods[decoder_name])
         missing_in_cli = schema_params - cli_params
         missing_in_schema = cli_params - schema_params
         if missing_in_cli:
@@ -95,13 +96,19 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
         if missing_in_schema:
             raise ValueError(f"Params of '{method['name']}' defined in CLI but missing in schema: {sorted(missing_in_schema)}")
         for parameter in method['params']:
-            code_type = [ctype for name, _, ctype in c_code_methods[decoder_name] if name == parameter['name']]
+            optional = ['true' in optional for name, _, _, optional in c_code_methods[decoder_name] if name == parameter['name']]
+            if not optional and method['name'] in cli_exceptions:
+                # TODO: handle this case later and fix issues raised by it
+                continue
+            if parameter.get('required', False) != (not optional[0]):
+                raise ValueError(f"For method {method['name']}: parameter '{parameter['name']}': 'required' field is mismatched")
+            code_type = [ctype for name, _, ctype, _ in c_code_methods[decoder_name] if name == parameter['name']]
             if 'class' in parameter:
                 if parameter['type'] != 'object':
                     raise ValueError(f"Invalid 'class' for '{parameter['type']}' on '{parameter['name']}' in '{method['name']}' rpc")
                 f_decoder_name = f"rpc_{parameter['class']}_decoders"
                 for f in schema_objects[parameter['class']]['fields']:
-                    f_code_type = [ctype for name, _, ctype in c_code_methods[f_decoder_name] if name == f['name']]
+                    f_code_type = [ctype for name, _, ctype, _ in c_code_methods[f_decoder_name] if name == f['name']]
                     if f_code_type[0] not in types:
                         # TODO: handle this case later and fix issues raised by it
                         continue
@@ -109,7 +116,7 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
                         raise ValueError(f"For method '{method['name']}', parameter '{parameter['name']}' embedded field '{f['name']}': "
                                          f"type {types[f_code_type[0]]} != {f['type']}")
                 continue
-            if not code_type:
+            if not code_type and method['name'] in cli_exceptions:
                 # TODO: handle this case later and fix issues raised by it
                 continue
             new_type = types.get(code_type[0])

@@ -22,7 +22,7 @@ free_rpc_tpoint_group(struct rpc_tpoint_group *p)
 
 static const struct spdk_json_object_decoder rpc_trace_set_tpoint_mask_decoders[] = {
 	{"name", offsetof(struct rpc_tpoint_group, name), spdk_json_decode_string},
-	{"tpoint_mask", offsetof(struct rpc_tpoint_group, tpoint_mask), spdk_json_decode_uint64, true},
+	{"tpoint_mask", offsetof(struct rpc_tpoint_group, tpoint_mask), spdk_json_decode_uint64},
 };
 
 static void

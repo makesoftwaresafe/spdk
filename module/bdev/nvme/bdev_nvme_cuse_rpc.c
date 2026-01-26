@@ -77,7 +77,7 @@ free_rpc_nvme_cuse_unregister(struct rpc_nvme_cuse_unregister *req)
 }
 
 static const struct spdk_json_object_decoder rpc_bdev_nvme_cuse_unregister_decoders[] = {
-	{"name", offsetof(struct rpc_nvme_cuse_unregister, name), spdk_json_decode_string, true},
+	{"name", offsetof(struct rpc_nvme_cuse_unregister, name), spdk_json_decode_string},
 };
 
 static void

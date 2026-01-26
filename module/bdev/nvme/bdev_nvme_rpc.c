@@ -1398,7 +1398,7 @@ free_rpc_get_controller_health_info(struct rpc_get_controller_health_info *r)
 }
 
 static const struct spdk_json_object_decoder rpc_bdev_nvme_get_controller_health_info_decoders[] = {
-	{"name", offsetof(struct rpc_get_controller_health_info, name), spdk_json_decode_string, true},
+	{"name", offsetof(struct rpc_get_controller_health_info, name), spdk_json_decode_string},
 };
 
 static void

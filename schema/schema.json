@@ -659,7 +659,6 @@
         {
           "name": "name",
           "type": "string",
-          "required": true,
           "description": "Name of the platform driver"
         }
       ]

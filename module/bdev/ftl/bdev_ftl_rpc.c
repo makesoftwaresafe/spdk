@@ -168,8 +168,8 @@ struct rpc_ftl_unmap {
 
 static const struct spdk_json_object_decoder rpc_bdev_ftl_unmap_decoders[] = {
 	{"name", offsetof(struct rpc_delete_ftl, name), spdk_json_decode_string},
-	{"lba", offsetof(struct rpc_ftl_unmap, lba), spdk_json_decode_uint64, true},
-	{"num_blocks", offsetof(struct rpc_ftl_unmap, num_blocks), spdk_json_decode_uint64, true},
+	{"lba", offsetof(struct rpc_ftl_unmap, lba), spdk_json_decode_uint64},
+	{"num_blocks", offsetof(struct rpc_ftl_unmap, num_blocks), spdk_json_decode_uint64},
 };
 
 

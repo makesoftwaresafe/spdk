@@ -11,7 +11,7 @@
 #include "spdk/cpuset.h"
 
 static const struct spdk_json_object_decoder rpc_nvmf_set_max_subsystems_decoders[] = {
-	{"max_subsystems", 0, spdk_json_decode_uint32, true}
+	{"max_subsystems", 0, spdk_json_decode_uint32}
 };
 
 static void

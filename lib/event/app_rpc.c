@@ -91,7 +91,7 @@ struct rpc_framework_monitor_context_switch {
 };
 
 static const struct spdk_json_object_decoder rpc_framework_monitor_context_switch_decoders[] = {
-	{"enabled", offsetof(struct rpc_framework_monitor_context_switch, enabled), spdk_json_decode_bool},
+	{"enabled", offsetof(struct rpc_framework_monitor_context_switch, enabled), spdk_json_decode_bool, true},
 };
 
 static void

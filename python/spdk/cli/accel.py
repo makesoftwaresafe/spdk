@@ -66,7 +66,7 @@ def add_parser(subparsers):
 
     p = subparsers.add_parser('accel_set_driver', help='Select accel platform driver to execute ' +
                               'operation chains')
-    p.add_argument('name', help='name of the platform driver')
+    p.add_argument('--name', help='name of the platform driver')
     p.set_defaults(func=accel_set_driver)
 
     def accel_set_options(args):
