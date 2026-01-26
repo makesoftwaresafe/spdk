@@ -401,7 +401,6 @@ struct nvmf_vfio_user_transport_opts {
 	bool					disable_mappable_bar0;
 	bool					disable_adaptive_irq;
 	bool					disable_shadow_doorbells;
-	bool					disable_compare;
 	bool					enable_intr_mode_sq_spreading;
 };
 
@@ -1122,18 +1121,11 @@ static const struct spdk_json_object_decoder vfio_user_transport_opts_decoder[] 
 		spdk_json_decode_bool, true
 	},
 	{
-		"disable_compare",
-		offsetof(struct nvmf_vfio_user_transport, transport_opts.disable_compare),
-		spdk_json_decode_bool, true
-	},
-	{
 		"enable_intr_mode_sq_spreading",
 		offsetof(struct nvmf_vfio_user_transport, transport_opts.enable_intr_mode_sq_spreading),
 		spdk_json_decode_bool, true
 	},
 };
-
-SPDK_LOG_DEPRECATION_REGISTER(disable_compare, "", "v26.05", SPDK_LOG_DEPRECATION_EVERY_24H);
 
 static struct spdk_nvmf_transport *
 nvmf_vfio_user_create(struct spdk_nvmf_transport_opts *opts)
@@ -1174,10 +1166,6 @@ nvmf_vfio_user_create(struct spdk_nvmf_transport_opts *opts)
 					    vu_transport)) {
 		SPDK_ERRLOG("spdk_json_decode_object_relaxed failed\n");
 		goto cleanup;
-	}
-
-	if (vu_transport->transport_opts.disable_compare) {
-		SPDK_LOG_DEPRECATED(disable_compare);
 	}
 
 	/*
@@ -3773,13 +3761,12 @@ nvmf_vfio_user_cdata_init(struct spdk_nvmf_transport *transport,
 	cdata->ieee[2] = 0x50;
 	memset(&cdata->sgls, 0, sizeof(struct spdk_nvme_cdata_sgls));
 	cdata->sgls.supported = SPDK_NVME_SGLS_SUPPORTED_DWORD_ALIGNED;
-	cdata->oncs.nvmcmps = !vu_transport->transport_opts.disable_compare &&
-			      vu_transport->transport.opts.oncs.nvmcmps;
+	cdata->oncs.nvmcmps = vu_transport->transport.opts.oncs.nvmcmps;
 	/* libvfio-user can only support 1 connection for now */
 	cdata->oncs.reservs = 0;
 	cdata->oacs.dbcs = !vu_transport->transport_opts.disable_shadow_doorbells;
-	cdata->fuses.fcws = !vu_transport->transport_opts.disable_compare &&
-			    vu_transport->transport.opts.oncs.nvmcmps && vu_transport->transport.opts.fuses.fcws;
+	cdata->fuses.fcws = vu_transport->transport.opts.oncs.nvmcmps &&
+			    vu_transport->transport.opts.fuses.fcws;
 }
 
 static int

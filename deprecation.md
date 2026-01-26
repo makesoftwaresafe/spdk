@@ -58,13 +58,6 @@ LPA, OACS, CMIC bits are updated to NVMe 2.2 definitions. The old bit names will
 
 NMIC, RESCAP, FPI and NSATTR bits are updated to NVMe 2.2 definitions. The old bit names will be removed in 26.05 release.
 
-### nvmf
-
-#### `disable_compare`
-
-`vfio_user` transport specific option is deprecated and will be removed in v26.05. Use `masked_oncs`
-option on `nvmf_create_transport` RPC, or `oncs` on `spdk_nvmf_transport_opts` C API instead.
-
 ### app/spdk_nvme_perf
 
 #### perf_g_option
