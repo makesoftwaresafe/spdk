@@ -157,7 +157,6 @@ static void			*g_init_cb_arg = NULL;
 
 static spdk_bdev_fini_cb	g_fini_cb_fn = NULL;
 static void			*g_fini_cb_arg = NULL;
-static struct spdk_thread	*g_fini_thread = NULL;
 
 struct spdk_bdev_qos_limit {
 	/** IOs or bytes allowed per second (i.e., 1s). */
@@ -2393,20 +2392,13 @@ spdk_bdev_initialize(spdk_bdev_init_cb cb_fn, void *cb_arg)
 }
 
 static void
-_bdev_finish_complete(void *not_used)
+bdev_finish_complete(void *not_used)
 {
 	spdk_bdev_fini_cb cb_fn = g_fini_cb_fn;
 	void *cb_arg = g_fini_cb_arg;
 
-	g_fini_cb_fn = NULL;
-	g_fini_cb_arg = NULL;
+	assert(spdk_thread_is_app_thread(NULL));
 
-	cb_fn(cb_arg);
-}
-
-static void
-bdev_finish_complete(void *not_used)
-{
 	if (g_bdev_mgr.bdev_io_pool) {
 		if (spdk_mempool_count(g_bdev_mgr.bdev_io_pool) != g_bdev_opts.bdev_io_pool_size) {
 			SPDK_ERRLOG("bdev IO pool count is %zu but should be %u\n",
@@ -2418,10 +2410,10 @@ bdev_finish_complete(void *not_used)
 	}
 
 	spdk_free(g_bdev_mgr.zero_buffer);
-
 	bdev_examine_allowlist_free();
-
-	spdk_thread_exec_msg(g_fini_thread, _bdev_finish_complete, NULL);
+	g_fini_cb_fn = NULL;
+	g_fini_cb_arg = NULL;
+	cb_fn(cb_arg);
 	g_bdev_mgr.init_complete = false;
 	g_bdev_mgr.module_init_complete = false;
 }
@@ -2597,37 +2589,24 @@ bdev_finish_wait_for_examine_done(void *cb_arg)
 
 static void bdev_open_async_fini(void);
 
-static void
-bdev_finish_wait_for_examine(void *not_used)
+void
+spdk_bdev_finish(spdk_bdev_fini_cb cb_fn, void *cb_arg)
 {
 	int rc;
+
+	assert(cb_fn != NULL);
+	assert(spdk_thread_is_app_thread(NULL));
+
+	g_fini_cb_fn = cb_fn;
+	g_fini_cb_arg = cb_arg;
+
+	bdev_open_async_fini();
 
 	rc = spdk_bdev_wait_for_examine(bdev_finish_wait_for_examine_done, NULL);
 	if (rc != 0) {
 		SPDK_ERRLOG("wait_for_examine failed: %s\n", spdk_strerror(-rc));
 		bdev_finish_wait_for_examine_done(NULL);
 	}
-}
-
-SPDK_LOG_DEPRECATION_REGISTER(spdk_bdev_finish,
-			      "calling spdk_bdev_finish from any thread is deprecated",
-			      "v26.05", SPDK_LOG_DEPRECATION_ALWAYS);
-
-void
-spdk_bdev_finish(spdk_bdev_fini_cb cb_fn, void *cb_arg)
-{
-	assert(cb_fn != NULL);
-
-	if (!spdk_thread_is_app_thread(NULL)) {
-		SPDK_LOG_DEPRECATED(spdk_bdev_finish);
-	}
-
-	g_fini_cb_fn = cb_fn;
-	g_fini_cb_arg = cb_arg;
-	g_fini_thread = spdk_get_thread();
-
-	bdev_open_async_fini();
-	spdk_thread_exec_msg(spdk_thread_get_app_thread(), bdev_finish_wait_for_examine, NULL);
 }
 
 struct spdk_bdev_io *
