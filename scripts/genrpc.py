@@ -72,9 +72,9 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
     if c_code_aliases != schema_aliases:
         raise ValueError(f"Aliases {c_code_aliases} do not match schema aliases {schema_aliases}. Update schema aliases or code c.")
     types = {'spdk_json_decode_bool': 'boolean', 'spdk_json_decode_string': 'string',
-             'spdk_json_decode_uint8': 'number', 'spdk_json_decode_uint16': 'number',
-             'spdk_json_decode_int32': 'number', 'spdk_json_decode_uint32': 'number',
-             'spdk_json_decode_uint64':'number', 'spdk_json_decode_uuid': 'string',
+             'spdk_json_decode_uint8': 'uint8', 'spdk_json_decode_uint16': 'uint16',
+             'spdk_json_decode_int32': 'int32', 'spdk_json_decode_uint32': 'uint32',
+             'spdk_json_decode_uint64':'uint64', 'spdk_json_decode_uuid': 'string',
              }
     for method in schema['methods']:
         decoder_name = schema_decoders.get(method['name'], f"rpc_{method['name']}_decoders")
@@ -108,7 +108,7 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
 
 
 def lint_py_cli(schema: Dict[str, Any]) -> None:
-    types = {str: 'string', None: 'string', int: 'number', bool: 'boolean', str.split: 'array'}
+    types = {'string' : str, 'uint8': int, 'uint16': int, 'int32': int, 'uint32': int, 'uint64': int, 'boolean':bool, 'array': str.split}
     exceptions = {'load_config', 'load_subsystem_config', 'save_config', 'save_subsystem_config'}
     parser, subparsers = rpc.create_parser()
     schema_methods = set(method["name"] for method in schema['methods'])
@@ -153,15 +153,17 @@ def lint_py_cli(schema: Dict[str, Any]) -> None:
                 if param.get('required', False) != required:
                     raise ValueError(f"For method {method['name']}: parameter '{param['name']}': 'required' field is mismatched")
                 # Check that schema has only those valid types:
-                if param['type'] not in types.values():
+                if param['type'] not in types:
                     raise ValueError(f"Invalid schema type '{param['type']}' for '{param['name']}' in '{method['name']}' rpc")
                 if type(action) in [argparse._StoreTrueAction, argparse._StoreFalseAction, argparse.BooleanOptionalAction]:
-                    newtype = 'boolean'
+                    newtype = bool
+                elif action.type is None:
+                    newtype = str
                 elif isinstance(action.type, partial):
-                    newtype = types.get(action.type.func)
+                    newtype = action.type.func
                 else:
-                    newtype = types.get(action.type)
-                if param['type'] != newtype:
+                    newtype = action.type
+                if types[param['type']] != newtype:
                     raise ValueError(f"For method {method['name']}: parameter '{param['name']}': 'type' field is mismatched")
 
 
