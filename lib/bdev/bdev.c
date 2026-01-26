@@ -154,7 +154,6 @@ static struct spdk_bdev_opts	g_bdev_opts = {
 
 static spdk_bdev_init_cb	g_init_cb_fn = NULL;
 static void			*g_init_cb_arg = NULL;
-static struct spdk_thread	*g_init_thread = NULL;
 
 static spdk_bdev_fini_cb	g_fini_cb_fn = NULL;
 static void			*g_fini_cb_arg = NULL;
@@ -2190,22 +2189,13 @@ bdev_mgmt_channel_create(void *io_device, void *ctx_buf)
 }
 
 static void
-_bdev_init_complete(void *ctx)
+bdev_init_complete(int rc)
 {
 	spdk_bdev_init_cb cb_fn = g_init_cb_fn;
 	void *cb_arg = g_init_cb_arg;
-	int rc = (int)(uintptr_t)ctx;
-
-	g_init_cb_fn = NULL;
-	g_init_cb_arg = NULL;
-
-	cb_fn(cb_arg, rc);
-}
-
-static void
-bdev_init_complete(int rc)
-{
 	struct spdk_bdev_module *m;
+
+	assert(spdk_thread_is_app_thread(NULL));
 
 	g_bdev_mgr.init_complete = true;
 
@@ -2221,7 +2211,9 @@ bdev_init_complete(int rc)
 		}
 	}
 
-	spdk_thread_exec_msg(g_init_thread, _bdev_init_complete, (void *)(uintptr_t)rc);
+	g_init_cb_fn = NULL;
+	g_init_cb_arg = NULL;
+	cb_fn(cb_arg, rc);
 }
 
 static bool
@@ -2335,11 +2327,17 @@ bdev_modules_init(void)
 	return 0;
 }
 
-static void
-bdev_initialize(void *not_used)
+void
+spdk_bdev_initialize(spdk_bdev_init_cb cb_fn, void *cb_arg)
 {
 	int rc = 0;
 	char mempool_name[32];
+
+	assert(cb_fn != NULL);
+	assert(spdk_thread_is_app_thread(NULL));
+
+	g_init_cb_fn = cb_fn;
+	g_init_cb_arg = cb_arg;
 
 	spdk_notify_type_register("bdev_register");
 	spdk_notify_type_register("bdev_unregister");
@@ -2392,26 +2390,6 @@ bdev_initialize(void *not_used)
 	}
 
 	bdev_module_action_complete();
-}
-
-SPDK_LOG_DEPRECATION_REGISTER(spdk_bdev_initialize,
-			      "calling spdk_bdev_initialize from any thread is deprecated",
-			      "v26.05", SPDK_LOG_DEPRECATION_ALWAYS);
-
-void
-spdk_bdev_initialize(spdk_bdev_init_cb cb_fn, void *cb_arg)
-{
-	assert(cb_fn != NULL);
-
-	if (!spdk_thread_is_app_thread(NULL)) {
-		SPDK_LOG_DEPRECATED(spdk_bdev_initialize);
-	}
-
-	g_init_cb_fn = cb_fn;
-	g_init_cb_arg = cb_arg;
-	g_init_thread = spdk_get_thread();
-
-	spdk_thread_exec_msg(spdk_thread_get_app_thread(), bdev_initialize, NULL);
 }
 
 static void
