@@ -1474,7 +1474,7 @@ print_namespace(struct spdk_nvme_ctrlr *ctrlr, struct spdk_nvme_ns *ns)
 		       nsdata->flbas.extended ? "Extended Data LBA" : "Separate Metadata Buffer");
 	}
 	printf("Namespace Sharing Capabilities:        %s\n",
-	       nsdata->nmic.can_share ? "Multiple Controllers" : "Private");
+	       nsdata->nmic.shrns ? "Multiple Controllers" : "Private");
 	blocksize = 1 << nsdata->lbaf[format_index].lbads;
 	printf("Size (in LBAs):                        %lld (%lldGiB)\n",
 	       (long long)nsdata->nsze,

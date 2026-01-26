@@ -41,18 +41,6 @@ See GitHub issue [2801](https://github.com/spdk/spdk/issues/2801) for additional
 New SPDK partition types should use GUID `6527994e-2c5a-4eec-9613-8f5944074e8b` which will create
 a bdev of the correct size.
 
-### nvme
-
-#### nvme_spec.h
-
-`spdk_nvme_ctrlr_data`, `spdk_nvme_cdata_oacs`
-
-LPA, OACS, CMIC bits are updated to NVMe 2.2 definitions. The old bit names will be removed in 26.05 release.
-
-`spdk_nvme_ns_data`
-
-NMIC, RESCAP, FPI and NSATTR bits are updated to NVMe 2.2 definitions. The old bit names will be removed in 26.05 release.
-
 ### app/spdk_nvme_perf
 
 #### perf_g_option

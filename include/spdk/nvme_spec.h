@@ -2255,81 +2255,47 @@ struct spdk_nvme_cdata_oncs {
 
 			uint16_t	rsvd : 7;
 		};
-
-		/** Old bit names are deprecated and will be removed in 26.05 release */
-		struct {
-			uint16_t	compare : 1;
-			uint16_t	write_unc : 1;
-			uint16_t	dsm: 1;
-			uint16_t	write_zeroes: 1;
-			uint16_t	set_features_save: 1;
-			uint16_t	reservations: 1;
-			uint16_t	timestamp: 1;
-			uint16_t	verify: 1;
-			uint16_t	copy: 1;
-			uint16_t	reserved9: 7;
-		};
 	};
 };
 
 struct spdk_nvme_cdata_oacs {
-	union {
-		struct {
-			/** Security Send Receive Supported */
-			uint16_t	ssrs  : 1;
+	/** Security Send Receive Supported */
+	uint16_t	ssrs  : 1;
 
-			/** Format NVM Supported */
-			uint16_t	fnvms    : 1;
+	/** Format NVM Supported */
+	uint16_t	fnvms    : 1;
 
-			/** Firmware Download Supported */
-			uint16_t	fwds  : 1;
+	/** Firmware Download Supported */
+	uint16_t	fwds  : 1;
 
-			/** Namespace Management Supported */
-			uint16_t	nms  : 1;
+	/** Namespace Management Supported */
+	uint16_t	nms  : 1;
 
-			/** Device Self-test Supported */
-			uint16_t	dsts : 1;
+	/** Device Self-test Supported */
+	uint16_t	dsts : 1;
 
-			/** Directives Supported */
-			uint16_t	dirs : 1;
+	/** Directives Supported */
+	uint16_t	dirs : 1;
 
-			/** Supports NVMe-MI */
-			uint16_t	nsrs : 1;
+	/** Supports NVMe-MI */
+	uint16_t	nsrs : 1;
 
-			/** Virtualization Management Supported */
-			uint16_t	vms : 1;
+	/** Virtualization Management Supported */
+	uint16_t	vms : 1;
 
-			/** Doorbell Buffer Config Supported */
-			uint16_t	dbcs : 1;
+	/** Doorbell Buffer Config Supported */
+	uint16_t	dbcs : 1;
 
-			/** Get LBA Status Supported */
-			uint16_t	glss : 1;
+	/** Get LBA Status Supported */
+	uint16_t	glss : 1;
 
-			/** Command and Feature Lockdown Supported */
-			uint16_t	cfls : 1;
+	/** Command and Feature Lockdown Supported */
+	uint16_t	cfls : 1;
 
-			/** Host Managed Live Migration Support */
-			uint16_t	hmlms : 1;
+	/** Host Managed Live Migration Support */
+	uint16_t	hmlms : 1;
 
-			uint16_t	rsvd : 4;
-		};
-
-		/** Old bit names are deprecated and will be removed in 26.05 release */
-		struct {
-			uint16_t	security  : 1;
-			uint16_t	format    : 1;
-			uint16_t	firmware  : 1;
-			uint16_t	ns_manage  : 1;
-			uint16_t	device_self_test : 1;
-			uint16_t	directives : 1;
-			uint16_t	nvme_mi : 1;
-			uint16_t	virtualization_management : 1;
-			uint16_t	doorbell_buffer_config : 1;
-			uint16_t	get_lba_status : 1;
-			uint16_t	command_feature_lockdown : 1;
-			uint16_t	oacs_rsvd : 5;
-		};
-	};
+	uint16_t	rsvd : 4;
 };
 
 struct spdk_nvme_cdata_fuses {
@@ -2340,12 +2306,6 @@ struct spdk_nvme_cdata_fuses {
 			uint16_t	fcws: 1;
 
 			uint16_t	rsvd: 15;
-		};
-
-		/** Old bit names are deprecated and will be removed in 26.05 release */
-		struct {
-			uint16_t	compare_and_write : 1;
-			uint16_t	reserved : 15;
 		};
 	};
 };
@@ -2474,31 +2434,18 @@ struct spdk_nvme_ctrlr_data {
 
 	/** controller multi-path I/O and namespace sharing capabilities */
 	struct {
-		union {
-			struct {
-				/* Multiple Ports */
-				uint8_t mports : 1;
+		/* Multiple Ports */
+		uint8_t mports : 1;
 
-				/* Multiple Controllers */
-				uint8_t mctrs: 1;
+		/* Multiple Controllers */
+		uint8_t mctrs: 1;
 
-				/* Function Type */
-				uint8_t ft : 1;
+		/* Function Type */
+		uint8_t ft : 1;
 
-				/* Asymmetric Namespace Access Reporting Support */
-				uint8_t anars : 1;
-				uint8_t rsvd : 4;
-			};
-
-			/** Old bit names are deprecated and will be removed in 26.05 release */
-			struct {
-				uint8_t multi_port	: 1;
-				uint8_t multi_ctrlr	: 1;
-				uint8_t sr_iov		: 1;
-				uint8_t ana_reporting	: 1;
-				uint8_t reserved	: 4;
-			};
-		};
+		/* Asymmetric Namespace Access Reporting Support */
+		uint8_t anars : 1;
+		uint8_t rsvd : 4;
 	} cmic;
 
 	/** maximum data transfer size */
@@ -2599,36 +2546,21 @@ struct spdk_nvme_ctrlr_data {
 
 	/** log page attributes */
 	struct {
-		union {
-			struct {
-				/* SMART Support */
-				uint8_t		smarts : 1;
-				/* Commands Supported and Effects Support */
-				uint8_t		cses : 1;
-				/* Log Page Extended Data Support */
-				uint8_t		lpeds: 1;
-				/* Telemetry Support */
-				uint8_t		ts : 1;
-				/* Persistent Event Support */
-				uint8_t		pes : 1;
-				/* Miscellaneous Log Page Support */
-				uint8_t		mlps : 1;
-				/* Data Area 4 Support */
-				uint8_t		da4s : 1;
-				uint8_t		rsvd : 1;
-			};
-			/** Old bit names are deprecated and will be removed in 26.05 release */
-			struct {
-				uint8_t		ns_smart : 1;
-				uint8_t		celp : 1;
-				uint8_t		edlp: 1;
-				uint8_t		telemetry : 1;
-				uint8_t		pelp : 1;
-				uint8_t		lplp : 1;
-				uint8_t		da4_telemetry : 1;
-				uint8_t		lpa_rsvd : 1;
-			};
-		};
+		/* SMART Support */
+		uint8_t		smarts : 1;
+		/* Commands Supported and Effects Support */
+		uint8_t		cses : 1;
+		/* Log Page Extended Data Support */
+		uint8_t		lpeds: 1;
+		/* Telemetry Support */
+		uint8_t		ts : 1;
+		/* Persistent Event Support */
+		uint8_t		pes : 1;
+		/* Miscellaneous Log Page Support */
+		uint8_t		mlps : 1;
+		/* Data Area 4 Support */
+		uint8_t		da4s : 1;
+		uint8_t		rsvd : 1;
 	} lpa;
 
 	/** error log page entries */
@@ -2960,94 +2892,48 @@ SPDK_STATIC_ASSERT(sizeof(struct spdk_nvme_secondary_ctrl_list) == 4096, "Incorr
 #pragma pack(pop)
 
 struct spdk_nvme_rescap {
-	union {
-		struct {
-			/** Persist Through Power Loss Support */
-			uint8_t ptpls	: 1;
-			/** Write Exclusive Support */
-			uint8_t wes	: 1;
-			/** Exclusive Access Support */
-			uint8_t eas	: 1;
-			/** Write Exclusive – Registrants Only Support */
-			uint8_t weros	: 1;
-			/** Exclusive Access – Registrants Only Support */
-			uint8_t	earos	: 1;
-			/** Write Exclusive – All Registrants Support */
-			uint8_t	wears	: 1;
-			/** Exclusive Access – All Registrants Support */
-			uint8_t	eaars	: 1;
-			/** Ignore Existing Key Support */
-			uint8_t	ieks	: 1;
-		};
-
-		/** Old bit naming is deprecated and will be removed in 26.05 release */
-		struct {
-			uint8_t	persist : 1;
-			uint8_t	write_exclusive : 1;
-			uint8_t	exclusive_access : 1;
-			uint8_t	write_exclusive_reg_only : 1;
-			uint8_t	exclusive_access_reg_only : 1;
-			uint8_t	write_exclusive_all_reg : 1;
-			uint8_t	exclusive_access_all_reg : 1;
-			uint8_t	ignore_existing_key : 1;
-		};
-	};
+	/** Persist Through Power Loss Support */
+	uint8_t ptpls	: 1;
+	/** Write Exclusive Support */
+	uint8_t wes	: 1;
+	/** Exclusive Access Support */
+	uint8_t eas	: 1;
+	/** Write Exclusive – Registrants Only Support */
+	uint8_t weros	: 1;
+	/** Exclusive Access – Registrants Only Support */
+	uint8_t	earos	: 1;
+	/** Write Exclusive – All Registrants Support */
+	uint8_t	wears	: 1;
+	/** Exclusive Access – All Registrants Support */
+	uint8_t	eaars	: 1;
+	/** Ignore Existing Key Support */
+	uint8_t	ieks	: 1;
 };
 SPDK_STATIC_ASSERT(sizeof(struct spdk_nvme_rescap) == 1, "Incorrect size");
 
 struct spdk_nvme_fpi {
-	union {
-		struct {
-			/** Remaining Format NVM */
-			uint8_t rfnvm	: 7;
-			/** Format Progress Indicator Support */
-			uint8_t fpis	: 1;
-		};
-
-		/** Old bit naming is deprecated and will be removed in 26.05 release */
-		struct {
-			uint8_t percentage_remaining	: 7;
-			uint8_t	fpi_supported		: 1;
-		};
-	};
+	/** Remaining Format NVM */
+	uint8_t rfnvm	: 7;
+	/** Format Progress Indicator Support */
+	uint8_t fpis	: 1;
 };
 SPDK_STATIC_ASSERT(sizeof(struct spdk_nvme_fpi) == 1, "Incorrect size");
 
 struct spdk_nvme_nmic {
-	union {
-		struct {
-			/** Shared Namespace */
-			uint8_t shrns	: 1;
-			/** Dispersed Namespace */
-			uint8_t disns	: 1;
-			/** Reserved */
-			uint8_t	rsvd : 6;
-		};
-
-		/** Old bit naming is deprecated and will be removed in 26.05 release */
-		struct {
-			uint8_t	can_share : 1;
-			uint8_t	reserved : 7;
-		};
-	};
+	/** Shared Namespace */
+	uint8_t shrns	: 1;
+	/** Dispersed Namespace */
+	uint8_t disns	: 1;
+	/** Reserved */
+	uint8_t	rsvd : 6;
 };
 SPDK_STATIC_ASSERT(sizeof(struct spdk_nvme_nmic) == 1, "Incorrect size");
 
 struct spdk_nvme_nsattr {
-	union {
-		struct {
-			/** Currently Write Protected */
-			uint8_t cwp	: 1;
-			/** Reserved */
-			uint8_t rsvd	: 7;
-		};
-
-		/** Old bit naming is deprecated and will be removed in 26.05 release */
-		struct {
-			uint8_t	write_protected	: 1;
-			uint8_t	reserved	: 7;
-		};
-	};
+	/** Currently Write Protected */
+	uint8_t cwp	: 1;
+	/** Reserved */
+	uint8_t rsvd	: 7;
 };
 SPDK_STATIC_ASSERT(sizeof(struct spdk_nvme_nsattr) == 1, "Incorrect size");
 
