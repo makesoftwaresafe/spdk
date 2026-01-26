@@ -96,6 +96,19 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
             raise ValueError(f"Params of '{method['name']}' defined in CLI but missing in schema: {sorted(missing_in_schema)}")
         for parameter in method['params']:
             code_type = [ctype for name, _, ctype in c_code_methods[decoder_name] if name == parameter['name']]
+            if 'class' in parameter:
+                if parameter['type'] != 'object':
+                    raise ValueError(f"Invalid 'class' for '{parameter['type']}' on '{parameter['name']}' in '{method['name']}' rpc")
+                f_decoder_name = f"rpc_{parameter['class']}_decoders"
+                for f in schema_objects[parameter['class']]['fields']:
+                    f_code_type = [ctype for name, _, ctype in c_code_methods[f_decoder_name] if name == f['name']]
+                    if f_code_type[0] not in types:
+                        # TODO: handle this case later and fix issues raised by it
+                        continue
+                    if types[f_code_type[0]] != f['type']:
+                        raise ValueError(f"For method '{method['name']}', parameter '{parameter['name']}' embedded field '{f['name']}': "
+                                         f"type {types[f_code_type[0]]} != {f['type']}")
+                continue
             if not code_type:
                 # TODO: handle this case later and fix issues raised by it
                 continue
