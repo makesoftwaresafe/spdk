@@ -8499,8 +8499,8 @@ bdev_destroy_cb(void *io_device)
 
 	bdev = __bdev_from_io_dev(io_device);
 
-	if (bdev->internal.unregister_td != spdk_get_thread()) {
-		spdk_thread_send_msg(bdev->internal.unregister_td, bdev_destroy_cb, io_device);
+	if (!spdk_thread_is_app_thread(NULL)) {
+		spdk_thread_send_msg(spdk_thread_get_app_thread(), bdev_destroy_cb, io_device);
 		return;
 	}
 
@@ -8641,29 +8641,12 @@ _bdev_unregister(void *ctx)
 	bdev_unregister(bdev, NULL, 0);
 }
 
-SPDK_LOG_DEPRECATION_REGISTER(spdk_bdev_unregister,
-			      "calling spdk_bdev_unregister from any thread is deprecated",
-			      "v26.05", SPDK_LOG_DEPRECATION_EVERY_24H);
-
 void
 spdk_bdev_unregister(struct spdk_bdev *bdev, spdk_bdev_unregister_cb cb_fn, void *cb_arg)
 {
-	struct spdk_thread	*thread;
+	assert(spdk_thread_is_app_thread(NULL));
 
 	SPDK_DEBUGLOG(bdev, "Removing bdev %s from list\n", bdev->name);
-
-	thread = spdk_get_thread();
-	if (!thread) {
-		/* The user called this from a non-SPDK thread. */
-		if (cb_fn != NULL) {
-			cb_fn(cb_arg, -ENOTSUP);
-		}
-		return;
-	}
-
-	if (!spdk_thread_is_app_thread(NULL)) {
-		SPDK_LOG_DEPRECATED(spdk_bdev_unregister);
-	}
 
 	spdk_spin_lock(&g_bdev_mgr.spinlock);
 	if (bdev->internal.status == SPDK_BDEV_STATUS_UNREGISTERING ||
@@ -8679,7 +8662,6 @@ spdk_bdev_unregister(struct spdk_bdev *bdev, spdk_bdev_unregister_cb cb_fn, void
 	bdev->internal.status = SPDK_BDEV_STATUS_UNREGISTERING;
 	bdev->internal.unregister_cb = cb_fn;
 	bdev->internal.unregister_ctx = cb_arg;
-	bdev->internal.unregister_td = thread;
 
 	/* kill QoS, if it's still running */
 	if (bdev->internal.qos && bdev->internal.qos->poller && TAILQ_EMPTY(&bdev->internal.open_descs)) {
@@ -10884,7 +10866,7 @@ bdev_unlock_lba_range_cb(struct spdk_bdev *bdev, void *_ctx, int status)
 
 	if (bdev->internal.status == SPDK_BDEV_STATUS_UNREGISTERING &&
 	    TAILQ_EMPTY(&bdev->internal.locked_ranges)) {
-		spdk_thread_send_msg(bdev->internal.unregister_td, _bdev_unregister, bdev);
+		spdk_thread_send_msg(spdk_thread_get_app_thread(), _bdev_unregister, bdev);
 	}
 	spdk_spin_unlock(&bdev->internal.spinlock);
 

@@ -754,9 +754,6 @@ struct spdk_bdev {
 		/** Unregister call context */
 		void *unregister_ctx;
 
-		/** Thread that issued the unregister.  The cb must be called on this thread. */
-		struct spdk_thread *unregister_td;
-
 		/** List of open descriptors for this block device. */
 		TAILQ_HEAD(, spdk_bdev_desc) open_descs;
 

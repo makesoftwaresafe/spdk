@@ -2543,58 +2543,6 @@ wrong_thread_teardown(void)
 }
 
 static void
-_bdev_unregistered_wt(void *ctx, int rc)
-{
-	struct spdk_thread **threadp = ctx;
-
-	if (rc) {
-		return;
-	}
-
-	*threadp = spdk_get_thread();
-}
-
-static void
-spdk_bdev_register_wt(void)
-{
-	struct spdk_bdev bdev = { 0 };
-	int rc;
-	struct spdk_thread *unreg_thread;
-
-	bdev.name = "wt_bdev";
-	bdev.fn_table = &fn_table;
-	bdev.module = &bdev_ut_if;
-	bdev.blocklen = 4096;
-	bdev.blockcnt = 1024;
-
-	/* Can register only on app thread */
-	rc = spdk_bdev_register(&bdev);
-	CU_ASSERT(rc == -EINVAL);
-
-	/* Can unregister on any thread */
-	set_thread(0);
-	rc = spdk_bdev_register(&bdev);
-	CU_ASSERT(rc == 0);
-	set_thread(1);
-	unreg_thread = NULL;
-	spdk_bdev_unregister(&bdev, _bdev_unregistered_wt, &unreg_thread);
-	poll_threads();
-	CU_ASSERT(unreg_thread == spdk_get_thread());
-
-	/* Can unregister by name on any thread */
-	set_thread(0);
-	rc = spdk_bdev_register(&bdev);
-	CU_ASSERT(rc == 0);
-	set_thread(1);
-	unreg_thread = NULL;
-	rc = spdk_bdev_unregister_by_name(bdev.name, bdev.module, _bdev_unregistered_wt,
-					  &unreg_thread);
-	CU_ASSERT(rc == 0);
-	poll_threads();
-	CU_ASSERT(unreg_thread == spdk_get_thread());
-}
-
-static void
 wait_for_examine_cb(void *arg)
 {
 	struct spdk_thread **thread = arg;
@@ -2619,6 +2567,8 @@ spdk_bdev_examine_wt(void)
 	/* Can examine only on the app thread */
 	rc = spdk_bdev_examine("ut_bdev_wt");
 	CU_ASSERT(rc == -EINVAL);
+
+	set_thread(0);
 	unregister_bdev(&g_bdev);
 	CU_ASSERT(spdk_bdev_get_by_name("ut_bdev_wt") == NULL);
 
@@ -2644,6 +2594,8 @@ spdk_bdev_examine_wt(void)
 	CU_ASSERT(rc == 0);
 	poll_threads();
 	CU_ASSERT(thread == spdk_get_thread());
+
+	set_thread(0);
 	unregister_bdev(&g_bdev);
 	CU_ASSERT(spdk_bdev_get_by_name("ut_bdev_wt") == NULL);
 
@@ -2984,7 +2936,7 @@ bdev_unregister_open_qos_data_race(void)
 	spdk_bdev_close(desc);
 	/* bdev_open() will call start_qos(). */
 	spdk_bdev_open_ext("ut_bdev", true, _bdev_event_cb, NULL, &desc);
-	set_thread(2);
+	set_thread(0);
 	/* unregister() will proceed to spdk_io_device_unregister(),
 	 * bdev_unregister_unsafe() returns 0, * as there are no channels open.  */
 	spdk_bdev_unregister(&g_bdev.bdev, _bdev_unregistered, &done);
@@ -3039,7 +2991,6 @@ main(int argc, char **argv)
 	CU_ADD_TEST(suite, bdev_set_io_timeout_mt);
 	CU_ADD_TEST(suite, lock_lba_range_then_submit_io);
 	CU_ADD_TEST(suite, unregister_during_reset);
-	CU_ADD_TEST(suite_wt, spdk_bdev_register_wt);
 	CU_ADD_TEST(suite_wt, spdk_bdev_examine_wt);
 	CU_ADD_TEST(suite, event_notify_and_close);
 	CU_ADD_TEST(suite, unregister_and_qos_poller);
