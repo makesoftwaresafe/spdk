@@ -7685,8 +7685,8 @@ test_disable_enable_ctrlr(void)
 	ctrlr_ch2 = spdk_io_channel_get_ctx(ch2);
 	CU_ASSERT(ctrlr_ch2->qpair != NULL);
 
-	/* Disable starts from thread 1. */
-	set_thread(1);
+	/* Disable starts from thread 0. */
+	set_thread(0);
 
 	/* Case 1: ctrlr is already disabled. */
 	nvme_ctrlr->disabled = true;

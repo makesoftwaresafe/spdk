@@ -1750,6 +1750,8 @@ static void
 bdev_nvme_clear_io_path_caches_done(struct nvme_ctrlr *nvme_ctrlr,
 				    void *ctx, int status)
 {
+	assert(spdk_thread_is_app_thread(NULL));
+
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 	assert(nvme_ctrlr->io_path_cache_clearing == true);
 	nvme_ctrlr->io_path_cache_clearing = false;
@@ -1786,6 +1788,8 @@ bdev_nvme_clear_io_path_cache(struct nvme_ctrlr_channel_iter *i,
 static void
 bdev_nvme_clear_io_path_caches(struct nvme_ctrlr *nvme_ctrlr)
 {
+	assert(spdk_thread_is_app_thread(NULL));
+
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 	if (!nvme_ctrlr_is_available(nvme_ctrlr) ||
 	    nvme_ctrlr->io_path_cache_clearing) {
@@ -2281,6 +2285,8 @@ static int
 bdev_nvme_reconnect_delay_timer_expired(void *ctx)
 {
 	struct nvme_ctrlr *nvme_ctrlr = ctx;
+
+	assert(spdk_thread_is_app_thread(NULL));
 
 	SPDK_DTRACE_PROBE1(bdev_nvme_ctrlr_reconnect_delay, nvme_ctrlr->nbdev_ctrlr->name);
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
@@ -2826,6 +2832,8 @@ static int
 bdev_nvme_disable_ctrlr(struct nvme_ctrlr *nvme_ctrlr)
 {
 	spdk_msg_fn msg_fn;
+
+	assert(spdk_thread_is_app_thread(NULL));
 
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 	if (nvme_ctrlr->destruct) {
@@ -5332,6 +5340,8 @@ nvme_ctrlr_read_ana_log_page_done(void *ctx, const struct spdk_nvme_cpl *cpl)
 {
 	struct nvme_ctrlr *nvme_ctrlr = ctx;
 
+	assert(spdk_thread_is_app_thread(NULL));
+
 	if (cpl != NULL && spdk_nvme_cpl_is_success(cpl)) {
 		bdev_nvme_parse_ana_log_page(nvme_ctrlr, nvme_ctrlr_set_ana_states,
 					     nvme_ctrlr);
@@ -6158,6 +6168,8 @@ bdev_nvme_delete_ctrlr_unsafe(struct nvme_ctrlr *nvme_ctrlr, bool hotplug)
 {
 	struct nvme_probe_skip_entry *entry;
 
+	assert(spdk_thread_is_app_thread(NULL));
+
 	/* The controller's destruction was already started */
 	if (nvme_ctrlr->destruct) {
 		return -EALREADY;
@@ -6181,6 +6193,8 @@ static int
 bdev_nvme_delete_ctrlr(struct nvme_ctrlr *nvme_ctrlr, bool hotplug)
 {
 	int rc;
+
+	assert(spdk_thread_is_app_thread(NULL));
 
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 	rc = bdev_nvme_delete_ctrlr_unsafe(nvme_ctrlr, hotplug);
@@ -6608,6 +6622,7 @@ bdev_nvme_add_secondary_trid(struct nvme_ctrlr *nvme_ctrlr,
 	int rc;
 
 	assert(nvme_ctrlr != NULL);
+	assert(spdk_thread_is_app_thread(NULL));
 
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 
@@ -7021,6 +7036,8 @@ _bdev_nvme_delete(struct nvme_ctrlr *nvme_ctrlr, const struct spdk_nvme_path_id 
 	spdk_msg_fn		msg_fn;
 	int			rc = -ENXIO;
 
+	assert(spdk_thread_is_app_thread(NULL));
+
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 
 	TAILQ_FOREACH_REVERSE_SAFE(p, &nvme_ctrlr->trids, nvme_paths, link, t) {
@@ -7327,6 +7344,8 @@ remove_discovery_entry(struct nvme_ctrlr *nvme_ctrlr)
 	struct spdk_nvme_path_id *path_id;
 	struct spdk_nvme_transport_id trid = {};
 	struct discovery_entry_ctx *entry_ctx, *tmp;
+
+	assert(spdk_thread_is_app_thread(NULL));
 
 	path_id = TAILQ_FIRST(&nvme_ctrlr->trids);
 
