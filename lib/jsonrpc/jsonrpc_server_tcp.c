@@ -91,6 +91,9 @@ jsonrpc_server_free_conn_request(struct spdk_jsonrpc_server_conn *conn)
 	 * We need to tell them that this connection is closed. */
 	STAILQ_FOREACH(request, &conn->outstanding_queue, link) {
 		request->conn = NULL;
+		if (request->batch != NULL) {
+			request->batch->conn = NULL;
+		}
 	}
 	pthread_spin_unlock(&conn->queue_lock);
 
