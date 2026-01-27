@@ -816,16 +816,16 @@ nvme_ctrlr_unregister_cb(void *io_device)
 }
 
 static void
-nvme_ctrlr_unregister(void *ctx)
+nvme_ctrlr_unregister(struct nvme_ctrlr *nvme_ctrlr)
 {
-	struct nvme_ctrlr *nvme_ctrlr = ctx;
-
 	spdk_io_device_unregister(nvme_ctrlr, nvme_ctrlr_unregister_cb);
 }
 
 static bool
 nvme_ctrlr_can_be_unregistered(struct nvme_ctrlr *nvme_ctrlr)
 {
+	assert(spdk_thread_is_app_thread(NULL));
+
 	if (!nvme_ctrlr->destruct) {
 		return false;
 	}
@@ -848,6 +848,8 @@ nvme_ctrlr_can_be_unregistered(struct nvme_ctrlr *nvme_ctrlr)
 static void
 nvme_ctrlr_put_ref_ext(struct nvme_ctrlr *nvme_ctrlr, nvme_ctrlr_put_ref_cb cb_fn)
 {
+	assert(spdk_thread_is_app_thread(NULL));
+
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 	SPDK_DTRACE_PROBE2(bdev_nvme_ctrlr_release, nvme_ctrlr->nbdev_ctrlr->name, nvme_ctrlr->ref);
 
@@ -864,13 +866,27 @@ nvme_ctrlr_put_ref_ext(struct nvme_ctrlr *nvme_ctrlr, nvme_ctrlr_put_ref_cb cb_f
 	}
 
 	pthread_mutex_unlock(&nvme_ctrlr->mutex);
-	spdk_thread_send_msg(spdk_thread_get_app_thread(), nvme_ctrlr_unregister, nvme_ctrlr);
+	nvme_ctrlr_unregister(nvme_ctrlr);
 }
 
 static void
 nvme_ctrlr_put_ref(struct nvme_ctrlr *nvme_ctrlr)
 {
 	nvme_ctrlr_put_ref_ext(nvme_ctrlr, NULL);
+}
+
+static void
+_nvme_ctrlr_put_ref(void *ctx)
+{
+	struct nvme_ctrlr *nvme_ctrlr = ctx;
+
+	nvme_ctrlr_put_ref_ext(nvme_ctrlr, NULL);
+}
+
+static void
+nvme_ctrlr_put_ref_async(void *nvme_ctrlr)
+{
+	spdk_thread_send_msg(spdk_thread_get_app_thread(), _nvme_ctrlr_put_ref, nvme_ctrlr);
 }
 
 static void
@@ -3722,11 +3738,8 @@ nvme_qpair_delete(struct nvme_qpair *nvme_qpair)
 	}
 
 	TAILQ_REMOVE(&nvme_qpair->group->qpair_list, nvme_qpair, tailq);
-
 	spdk_put_io_channel(spdk_io_channel_from_ctx(nvme_qpair->group));
-
-	nvme_ctrlr_put_ref(nvme_qpair->ctrlr);
-
+	nvme_ctrlr_put_ref_async(nvme_qpair->ctrlr);
 	free(nvme_qpair);
 }
 
