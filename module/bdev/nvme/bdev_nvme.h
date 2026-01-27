@@ -134,6 +134,7 @@ struct nvme_ctrlr {
 	struct spdk_key				*dhchap_key;
 	struct spdk_key				*dhchap_ctrlr_key;
 
+	/* Used for ref, flags, trid list protection. */
 	pthread_mutex_t				mutex;
 };
 
