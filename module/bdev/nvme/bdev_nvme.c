@@ -353,7 +353,6 @@ static int bdev_nvme_iov_passthru_md(struct nvme_bdev_io *bio, struct spdk_nvme_
 static void bdev_nvme_abort(struct nvme_bdev_channel *nbdev_ch,
 			    struct nvme_bdev_io *bio, struct nvme_bdev_io *bio_to_abort);
 static void bdev_nvme_reset_io(struct nvme_bdev *nbdev, struct nvme_bdev_io *bio);
-static int bdev_nvme_reset_ctrlr(struct nvme_ctrlr *nvme_ctrlr);
 static int bdev_nvme_failover_ctrlr(struct nvme_ctrlr *nvme_ctrlr);
 static void remove_cb(void *cb_ctx, struct spdk_nvme_ctrlr *ctrlr);
 static int nvme_ctrlr_read_ana_log_page(struct nvme_ctrlr *nvme_ctrlr);
@@ -2721,15 +2720,31 @@ bdev_nvme_reset_ctrlr(struct nvme_ctrlr *nvme_ctrlr)
 	spdk_msg_fn msg_fn;
 	int rc;
 
+	assert(spdk_thread_is_app_thread(NULL));
+
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 	rc = bdev_nvme_reset_ctrlr_unsafe(nvme_ctrlr, &msg_fn);
 	pthread_mutex_unlock(&nvme_ctrlr->mutex);
-
 	if (rc == 0) {
+		/* Ensure completion is async otherwise ctrlr_op_cb_fn might not be set yet. */
 		spdk_thread_send_msg(spdk_thread_get_app_thread(), msg_fn, nvme_ctrlr);
 	}
 
 	return rc;
+}
+
+static void
+bdev_nvme_reset_ctrlr_msg(void *ctx)
+{
+	struct nvme_ctrlr *nvme_ctrlr = ctx;
+
+	bdev_nvme_reset_ctrlr(nvme_ctrlr);
+}
+
+static void
+bdev_nvme_reset_ctrlr_async(struct nvme_ctrlr *nvme_ctrlr)
+{
+	spdk_thread_send_msg(spdk_thread_get_app_thread(), bdev_nvme_reset_ctrlr_msg, nvme_ctrlr);
 }
 
 static int
@@ -2882,6 +2897,7 @@ bdev_nvme_disable_ctrlr(struct nvme_ctrlr *nvme_ctrlr)
 	nvme_ctrlr_get_ref(nvme_ctrlr);
 	pthread_mutex_unlock(&nvme_ctrlr->mutex);
 
+	/* Ensure completion is async otherwise ctrlr_op_cb_fn might not be set yet. */
 	spdk_thread_send_msg(spdk_thread_get_app_thread(), msg_fn, nvme_ctrlr);
 	return 0;
 }
@@ -4848,10 +4864,10 @@ nvme_abort_cpl(void *ctx, const struct spdk_nvme_cpl *cpl)
 	if (spdk_nvme_cpl_is_error(cpl)) {
 		NVME_CTRLR_WARNLOG(nvme_ctrlr, "Abort failed. Resetting controller. sc is %u, sct is %u.\n",
 				   cpl->status.sc, cpl->status.sct);
-		bdev_nvme_reset_ctrlr(nvme_ctrlr);
+		bdev_nvme_reset_ctrlr_async(nvme_ctrlr);
 	} else if (cpl->cdw0 & 0x1) {
 		NVME_CTRLR_WARNLOG(nvme_ctrlr, "Specified command could not be aborted.\n");
-		bdev_nvme_reset_ctrlr(nvme_ctrlr);
+		bdev_nvme_reset_ctrlr_async(nvme_ctrlr);
 	}
 }
 
@@ -4878,7 +4894,7 @@ timeout_cb(void *cb_arg, struct spdk_nvme_ctrlr *ctrlr,
 		if (csts.bits.cfs) {
 			NVME_CTRLR_ERRLOG(nvme_ctrlr, "%s on qpair:%p, reset required\n",
 					  csts.raw == 0xFFFFFFFF ? "Could not read csts register" : "Controller Fatal Status", qpair);
-			bdev_nvme_reset_ctrlr(nvme_ctrlr);
+			bdev_nvme_reset_ctrlr_async(nvme_ctrlr);
 			return;
 		}
 	}
@@ -4907,7 +4923,7 @@ timeout_cb(void *cb_arg, struct spdk_nvme_ctrlr *ctrlr,
 
 	/* FALLTHROUGH */
 	case SPDK_BDEV_NVME_TIMEOUT_ACTION_RESET:
-		bdev_nvme_reset_ctrlr(nvme_ctrlr);
+		bdev_nvme_reset_ctrlr_async(nvme_ctrlr);
 		break;
 	case SPDK_BDEV_NVME_TIMEOUT_ACTION_NONE:
 		NVME_CTRLR_DEBUGLOG(nvme_ctrlr, "No action for nvme controller timeout.\n");

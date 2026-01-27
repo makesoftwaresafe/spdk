@@ -1539,8 +1539,8 @@ test_reset_ctrlr(void)
 	ctrlr_ch2 = spdk_io_channel_get_ctx(ch2);
 	CU_ASSERT(ctrlr_ch2->qpair != NULL);
 
-	/* Reset starts from thread 1. */
-	set_thread(1);
+	/* Reset starts from thread 0. */
+	set_thread(0);
 
 	/* Case 1: ctrlr is already being destructed. */
 	nvme_ctrlr->destruct = true;
@@ -1617,6 +1617,8 @@ test_reset_ctrlr(void)
 
 	ctrlr.is_removed = false;
 
+	set_thread(1);
+
 	spdk_put_io_channel(ch2);
 
 	set_thread(0);
@@ -1663,16 +1665,14 @@ test_race_between_reset_and_destruct_ctrlr(void)
 	ch2 = spdk_get_io_channel(nvme_ctrlr);
 	SPDK_CU_ASSERT_FATAL(ch2 != NULL);
 
-	/* Reset starts from thread 1. */
-	set_thread(1);
+	/* Reset starts from thread 0. */
+	set_thread(0);
 
 	rc = bdev_nvme_reset_ctrlr(nvme_ctrlr);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(nvme_ctrlr->resetting == true);
 
 	/* Try destructing ctrlr while ctrlr is being reset, but it will be deferred. */
-	set_thread(0);
-
 	rc = spdk_bdev_nvme_delete("nvme0", &g_any_path, NULL, NULL);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(nvme_ctrlr_get_by_name("nvme0") == nvme_ctrlr);
@@ -5459,8 +5459,6 @@ test_concurrent_read_ana_log_page(void)
 
 	CU_ASSERT(ctrlr->adminq.num_outstanding_reqs == 1);
 
-	set_thread(1);
-
 	nvme_ctrlr_read_ana_log_page(nvme_ctrlr);
 
 	CU_ASSERT(ctrlr->adminq.num_outstanding_reqs == 1);
@@ -5910,8 +5908,8 @@ test_reconnect_ctrlr(void)
 
 	ctrlr_ch2 = spdk_io_channel_get_ctx(ch2);
 
-	/* Reset starts from thread 1. */
-	set_thread(1);
+	/* Reset starts from thread 0. */
+	set_thread(0);
 
 	/* The reset should fail and a reconnect timer should be registered. */
 	ctrlr.fail_reset = true;
@@ -5932,7 +5930,7 @@ test_reconnect_ctrlr(void)
 	CU_ASSERT(nvme_ctrlr->reconnect_is_delayed == true);
 
 	/* A new reset starts from thread 0. */
-	set_thread(1);
+	set_thread(0);
 
 	/* The reset should cancel the reconnect timer and should start from reconnection.
 	 * Then, the reset should fail and a reconnect timer should be registered again.
@@ -6012,6 +6010,8 @@ test_reconnect_ctrlr(void)
 
 	CU_ASSERT(bdev_nvme_check_ctrlr_loss_timeout(nvme_ctrlr) == true);
 	CU_ASSERT(nvme_ctrlr->destruct == true);
+
+	set_thread(1);
 
 	spdk_put_io_channel(ch2);
 
@@ -7274,8 +7274,8 @@ test_race_between_reset_and_disconnected(void)
 	ctrlr_ch2 = spdk_io_channel_get_ctx(ch2);
 	CU_ASSERT(ctrlr_ch2->qpair != NULL);
 
-	/* Reset starts from thread 1. */
-	set_thread(1);
+	/* Reset starts from thread 0. */
+	set_thread(0);
 
 	nvme_ctrlr->resetting = false;
 	curr_trid->last_failed_tsc = spdk_get_ticks();
@@ -7344,6 +7344,8 @@ test_race_between_reset_and_disconnected(void)
 	CU_ASSERT(ctrlr_ch1->qpair->qpair != NULL);
 	CU_ASSERT(ctrlr_ch2->qpair->qpair != NULL);
 
+	set_thread(1);
+
 	spdk_put_io_channel(ch2);
 
 	set_thread(0);
@@ -7410,8 +7412,8 @@ test_ctrlr_op_rpc(void)
 	ctrlr_ch2 = spdk_io_channel_get_ctx(ch2);
 	CU_ASSERT(ctrlr_ch2->qpair != NULL);
 
-	/* Reset starts from thread 1. */
-	set_thread(1);
+	/* Reset starts from thread 0. */
+	set_thread(0);
 
 	/* Case 1: ctrlr is already being destructed. */
 	nvme_ctrlr->destruct = true;
@@ -7464,6 +7466,8 @@ test_ctrlr_op_rpc(void)
 	poll_threads();
 
 	CU_ASSERT(ctrlr_op_rc == -EINVAL);
+
+	set_thread(1);
 
 	spdk_put_io_channel(ch2);
 
