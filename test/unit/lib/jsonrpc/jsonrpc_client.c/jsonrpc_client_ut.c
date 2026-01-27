@@ -252,6 +252,158 @@ test_parse_response_not_object(void)
 	ut_free_client(client);
 }
 
+static void
+test_begin_end_batch(void)
+{
+	struct spdk_jsonrpc_client_request *request;
+	int rc;
+
+	request = ut_create_client_request();
+
+	/* Begin batch should succeed and set batch_write_ctx */
+	rc = spdk_jsonrpc_begin_batch(request);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(request->batch_write_ctx != NULL);
+	CU_ASSERT(request->batch_id == 0);
+
+	/* End batch should clear batch_write_ctx */
+	spdk_jsonrpc_end_batch(request);
+	CU_ASSERT(request->batch_write_ctx == NULL);
+
+	/* Verify output is a valid JSON array (empty batch) */
+	CU_ASSERT(request->send_len > 0);
+	CU_ASSERT(request->send_buf[0] == '[');
+	CU_ASSERT(request->send_buf[request->send_len - 2] == ']');
+	CU_ASSERT(request->send_buf[request->send_len - 1] == '\n');
+
+	ut_free_client_request(request);
+}
+
+static void
+test_batch_single_request(void)
+{
+	struct spdk_jsonrpc_client_request *request;
+	struct spdk_json_write_ctx *w;
+	int rc;
+
+	request = ut_create_client_request();
+
+	/* Begin batch */
+	rc = spdk_jsonrpc_begin_batch(request);
+	CU_ASSERT(rc == 0);
+
+	/* Add one request with auto-assigned ID */
+	w = spdk_jsonrpc_begin_request(request, -1, "test_method");
+	CU_ASSERT(w != NULL);
+	CU_ASSERT(request->batch_id == 1); /* Should have been incremented */
+	spdk_jsonrpc_end_request(request, w);
+
+	/* End batch */
+	spdk_jsonrpc_end_batch(request);
+
+	/* Verify output is valid JSON */
+	CU_ASSERT(request->send_len > 0);
+	request->send_buf[request->send_len] = '\0';
+
+	/* Parse and verify structure */
+	rc = spdk_json_parse(request->send_buf, request->send_len - 1, NULL, 0, NULL, 0);
+	CU_ASSERT(rc > 0);
+
+	ut_free_client_request(request);
+}
+
+static void
+test_batch_multiple_requests(void)
+{
+	struct spdk_jsonrpc_client_request *request;
+	struct spdk_json_write_ctx *w;
+	int rc;
+
+	request = ut_create_client_request();
+
+	/* Begin batch */
+	rc = spdk_jsonrpc_begin_batch(request);
+	CU_ASSERT(rc == 0);
+
+	/* Add first request with auto-assigned ID (should be 0) */
+	w = spdk_jsonrpc_begin_request(request, -1, "method1");
+	CU_ASSERT(w != NULL);
+	CU_ASSERT(request->batch_id == 1);
+	spdk_jsonrpc_end_request(request, w);
+
+	/* Add second request with auto-assigned ID (should be 1) */
+	w = spdk_jsonrpc_begin_request(request, -1, "method2");
+	CU_ASSERT(w != NULL);
+	CU_ASSERT(request->batch_id == 2);
+	spdk_jsonrpc_end_request(request, w);
+
+	/* Add third request with explicit ID */
+	w = spdk_jsonrpc_begin_request(request, 99, "method3");
+	CU_ASSERT(w != NULL);
+	CU_ASSERT(request->batch_id == 2); /* Should not change with explicit ID */
+	spdk_jsonrpc_end_request(request, w);
+
+	/* End batch */
+	spdk_jsonrpc_end_batch(request);
+
+	/* Verify output is valid JSON */
+	CU_ASSERT(request->send_len > 0);
+	request->send_buf[request->send_len] = '\0';
+
+	rc = spdk_json_parse(request->send_buf, request->send_len - 1, NULL, 0, NULL, 0);
+	CU_ASSERT(rc > 0);
+
+	ut_free_client_request(request);
+}
+
+static void
+test_parse_batch_response_success(void)
+{
+	struct spdk_jsonrpc_client *client;
+	int rc;
+
+	client = ut_create_client();
+
+	/* Set up a batch response with multiple successful results */
+	ut_client_set_response(client,
+			       "["
+			       "{\"jsonrpc\":\"2.0\",\"id\":0,\"result\":\"result1\"},"
+			       "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"result2\"}"
+			       "]");
+
+	rc = jsonrpc_parse_response(client);
+	CU_ASSERT(rc == 1);
+	CU_ASSERT(client->resp != NULL);
+	CU_ASSERT(client->resp->jsonrpc.result != NULL);
+	CU_ASSERT(client->resp->jsonrpc.error == NULL);
+
+	ut_free_client(client);
+}
+
+static void
+test_parse_batch_response_with_error(void)
+{
+	struct spdk_jsonrpc_client *client;
+	int rc;
+
+	client = ut_create_client();
+
+	/* Set up a batch response with one error */
+	ut_client_set_response(client,
+			       "["
+			       "{\"jsonrpc\":\"2.0\",\"id\":0,\"result\":\"success\"},"
+			       "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32600,\"message\":\"error\"}}"
+			       "]");
+
+	rc = jsonrpc_parse_response(client);
+	CU_ASSERT(rc == 1);
+	CU_ASSERT(client->resp != NULL);
+	/* Should capture the first error found */
+	CU_ASSERT(client->resp->jsonrpc.error != NULL);
+
+	ut_free_client(client);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -271,6 +423,11 @@ main(int argc, char **argv)
 	CU_ADD_TEST(suite, test_parse_response_invalid_json);
 	CU_ADD_TEST(suite, test_parse_response_wrong_version);
 	CU_ADD_TEST(suite, test_parse_response_not_object);
+	CU_ADD_TEST(suite, test_begin_end_batch);
+	CU_ADD_TEST(suite, test_batch_single_request);
+	CU_ADD_TEST(suite, test_batch_multiple_requests);
+	CU_ADD_TEST(suite, test_parse_batch_response_success);
+	CU_ADD_TEST(suite, test_parse_batch_response_with_error);
 
 	num_failures = spdk_ut_run_tests(argc, argv, NULL);
 

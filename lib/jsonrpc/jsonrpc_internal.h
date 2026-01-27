@@ -129,6 +129,12 @@ struct spdk_jsonrpc_client_request {
 	size_t send_offset;
 
 	uint8_t *send_buf;
+
+	/* Batch mode state: non-NULL when building a batch request */
+	struct spdk_json_write_ctx *batch_write_ctx;
+
+	/* Counter for auto-assigned batch request IDs */
+	uint32_t batch_id;
 };
 
 struct spdk_jsonrpc_client_response_internal {
