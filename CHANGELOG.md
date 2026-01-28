@@ -4,75 +4,63 @@
 
 ## v26.01
 
-### bdev/aio
+### accel_ae4dma
 
-Disable RWF_NOWAIT default flag usage; user needs to explicitly request to enable
-it using --no-wait (nowait) option.
+Added a user-space driver with support for the AE4DMA (AMD EPYC 4th Generation
+Direct Memory Access) offload engine. The AE4DMA user-space driver offloads memory copies to
+the DMA engine in AMD Embedded EPYC processors. Added a new AE4DMA module to the Accel
+Framework. To use the AE4DMA module, use the new RPC `ae4dma_scan_accel_module`.
 
 ### bdev
 
 All aliases are now removed from the block device names list upon unregistration.
 
-### util/net
+### bdev_aio
 
-`spdk_net_getaddr` returns negative errno value on failure instead -1 and setting errno.
-
-### sock
-
-`spdk_sock_getaddr`, `spdk_sock_close`, `spdk_sock_flush`, `spdk_sock_recv`, `spdk_sock_writev`,
-`spdk_sock_readv`, `spdk_sock_recv_next`, `spdk_sock_set_recvlowat`, `spdk_sock_set_recvbuf`,
-`spdk_sock_set_sendbuf`, `spdk_sock_group_add_sock`, `spdk_sock_group_remove_sock`,
-`spdk_sock_group_provide_buf`, `spdk_sock_group_poll`, `spdk_sock_group_poll_count`,
-`spdk_sock_group_close`, `spdk_sock_impl_get_opts`, `spdk_sock_impl_set_opts`,
-`spdk_sock_set_default_impl`, `spdk_sock_group_register_interrupt`
-return negative errno value on failure instead -1 and setting errno.
+Disabled `RWF_NOWAIT` default flag usage - user needs to explicitly request to enable it using
+`--no-wait` (nowait) option.
 
 ### event
 
-Added new public API: `spdk_app_setup_trace()` to set up SPDK tracing for applications.
+Added new public API `spdk_app_setup_trace()` to set up SPDK tracing for applications.
+
+### nvme
+
+Removed the `spdk_nvme_qpair_get_optimal_poll_group()` API. It was unused.
+Removed the `spdk_nvme_poll_group_get_fd()` API. It was unused. An fd can still be obtained
+by calling `spdk_nvme_poll_group_get_fd_group()` and then asking the fd_group for its fd.
+
+### nvmf
+
+Introduced the API `spdk_nvmf_set_custom_discovery_filter()` to set up custom discovery filter.
+
+Added support for preempt-and-abort mode of persistent reservations acquire command.
+
+Added support for adding and deleting hosts from a discovery referral.
 
 ### python
 
 Deprecate some boolean python cli arguments to use new modern argparse format instead.
 
-### nvme
-
-Removed the spdk_nvme_qpair_get_optimal_poll_group API. It was unused.
-Removed the spdk_nvme_poll_group_get_fd API. It was unused. An fd can still be obtained by
-calling spdk_nvme_poll_group_get_fd_group() and then asking the fd_group for its fd.
-
-### nvmf
-
-Introduced the API 'spdk_nvmf_set_custom_discovery_filter' to set up custom discovery
-filter.
-
-Add support for preempt-and-abort mode of persistent reservations acquire command.
-
-Added support for adding and deleting hosts from a discovery referral.
-
-### AE4DMA
-
-This release adds a user-space driver with support for the AE4DMA (AMD EPYC 4th Generation
-Direct Memory Access) offload engine.
-
-AE4DMA
-
-- The AE4DMA user-space driver offloads memory copies to the DMA engine in AMD Embedded EPYC
-  processors.
-- Added a new AE4DMA module to the Accel Framework. To use the AE4DMA module,
-  use the new RPC ae4dma_scan_accel_module.
-
-### rpc
-
-A new RPC ae4dma_scan_accel_module has been added to the accel framework
-to enable the AE4DMA module.
-
 ### sock
 
-Introduced `spdk_sock_initialize`, which may optionally be called before any use of the sock
-API. It is automatically called by the SPDK app framework. `spdk_sock_initialize` is
-not thread safe and should be called only once. Subsequent calls with the same options
-will succeed, but with different options will return -EALREADY.
+Introduced `spdk_sock_initialize()`, which may optionally be called before any use of the
+sock APIs. It is automatically called by the SPDK app framework. `spdk_sock_initialize()` is
+not thread safe and should be called only once. Subsequent calls with the same options will
+succeed, but with different options will return `-EALREADY`.
+
+Following APIs now return negative errno value on failure instead of -1 and setting errno:
+`spdk_sock_getaddr()`, `spdk_sock_close()`, `spdk_sock_flush()`, `spdk_sock_recv()`,
+`spdk_sock_writev()`, `spdk_sock_readv()`, `spdk_sock_recv_next()`,
+`spdk_sock_set_recvlowat()`, `spdk_sock_set_recvbuf()`, `spdk_sock_set_sendbuf()`,
+`spdk_sock_group_add_sock()`, `spdk_sock_group_remove_sock()`,
+`spdk_sock_group_provide_buf()`, `spdk_sock_group_poll()`, `spdk_sock_group_poll_count()`,
+`spdk_sock_group_close()`, `spdk_sock_impl_get_opts()`, `spdk_sock_impl_set_opts()`,
+`spdk_sock_set_default_impl()`, `spdk_sock_group_register_interrupt()`.
+
+### util
+
+`spdk_net_getaddr()` returns negative errno value on failure instead of -1 and setting errno.
 
 ## v25.09
 
