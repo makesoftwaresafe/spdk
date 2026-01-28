@@ -2682,6 +2682,8 @@ _bdev_nvme_reset_ctrlr(void *ctx)
 static int
 bdev_nvme_reset_ctrlr_unsafe(struct nvme_ctrlr *nvme_ctrlr, spdk_msg_fn *msg_fn)
 {
+	assert(spdk_thread_is_app_thread(NULL));
+
 	if (nvme_ctrlr->destruct) {
 		return -ENXIO;
 	}
@@ -3062,7 +3064,7 @@ nvme_bdev_ctrlr_op_rpc(struct nvme_bdev_ctrlr *nbdev_ctrlr, enum nvme_ctrlr_op o
 	nvme_bdev_ctrlr_op_rpc_continue(ctx, rc);
 }
 
-static void _bdev_nvme_reset_io(struct nvme_bdev_io *bio);
+static void _bdev_nvme_reset_io_async(struct nvme_bdev_io *bio);
 
 static void
 bdev_nvme_unfreeze_bdev_channel_done(struct nvme_bdev *nbdev, void *ctx, int status)
@@ -3120,7 +3122,7 @@ _bdev_nvme_reset_io_continue(void *ctx)
 	}
 
 	bio->io_path = next_io_path;
-	_bdev_nvme_reset_io(bio);
+	_bdev_nvme_reset_io_async(bio);
 }
 
 static void
@@ -3145,16 +3147,19 @@ bdev_nvme_reset_io_continue(void *cb_arg, int rc)
 }
 
 static void
-_bdev_nvme_reset_io(struct nvme_bdev_io *bio)
+_bdev_nvme_reset_io_msg(void *ctx)
 {
+	struct nvme_bdev_io *bio = ctx;
 	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(bio);
 	struct nvme_bdev *nbdev = nbdev_from_bdev(bdev_io->bdev);
 	struct nvme_ctrlr *nvme_ctrlr = bio->io_path->qpair->ctrlr;
-	spdk_msg_fn msg_fn;
+	spdk_msg_fn reset_fn;
 	int rc;
 
+	assert(spdk_thread_is_app_thread(NULL));
+
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
-	rc = bdev_nvme_reset_ctrlr_unsafe(nvme_ctrlr, &msg_fn);
+	rc = bdev_nvme_reset_ctrlr_unsafe(nvme_ctrlr, &reset_fn);
 	if (rc == -EBUSY) {
 		/*
 		 * Reset call is queued only if it is from the app framework. This is on purpose so that
@@ -3185,8 +3190,14 @@ _bdev_nvme_reset_io(struct nvme_bdev_io *bio)
 	assert(nvme_ctrlr->ctrlr_op_cb_arg == NULL);
 	nvme_ctrlr->ctrlr_op_cb_fn = bdev_nvme_reset_io_continue;
 	nvme_ctrlr->ctrlr_op_cb_arg = bio;
-	spdk_thread_send_msg(spdk_thread_get_app_thread(), msg_fn, nvme_ctrlr);
 	NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p started resetting ctrlr.\n", bio);
+	reset_fn(nvme_ctrlr);
+}
+
+static void
+_bdev_nvme_reset_io_async(struct nvme_bdev_io *bio)
+{
+	spdk_thread_send_msg(spdk_thread_get_app_thread(), _bdev_nvme_reset_io_msg, bio);
 }
 
 static void
@@ -3211,7 +3222,7 @@ bdev_nvme_freeze_bdev_channel_done(struct nvme_bdev *nbdev, void *ctx, int statu
 	assert(io_path != NULL);
 
 	bio->io_path = io_path;
-	_bdev_nvme_reset_io(bio);
+	_bdev_nvme_reset_io_async(bio);
 }
 
 static void

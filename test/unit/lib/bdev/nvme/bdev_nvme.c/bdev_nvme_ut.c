@@ -2036,6 +2036,7 @@ test_pending_reset(void)
 
 	poll_thread_times(0, 1);
 	poll_thread_times(1, 2);
+	poll_thread_times(0, 1);
 
 	CU_ASSERT(nvme_ctrlr->resetting == true);
 	CU_ASSERT(TAILQ_EMPTY(&nvme_ctrlr->pending_resets));
@@ -2048,7 +2049,7 @@ test_pending_reset(void)
 	poll_thread_times(1, 1);
 	poll_thread_times(0, 2);
 	poll_thread_times(1, 1);
-	poll_thread_times(0, 1);
+	poll_thread_times(0, 2);
 
 	CU_ASSERT(spdk_bdev_io_from_ctx(TAILQ_FIRST(&nvme_ctrlr->pending_resets)) == second_bdev_io);
 
@@ -2072,6 +2073,7 @@ test_pending_reset(void)
 
 	poll_thread_times(0, 1);
 	poll_thread_times(1, 2);
+	poll_thread_times(0, 1);
 
 	CU_ASSERT(nvme_ctrlr->resetting == true);
 	CU_ASSERT(TAILQ_EMPTY(&nvme_ctrlr->pending_resets));
@@ -2080,15 +2082,16 @@ test_pending_reset(void)
 
 	bdev_nvme_submit_request(ch1, second_bdev_io);
 
+	ctrlr->fail_reset = true;
+
 	poll_thread_times(0, 1);
 	poll_thread_times(1, 1);
 	poll_thread_times(0, 2);
 	poll_thread_times(1, 1);
-	poll_thread_times(0, 1);
+	poll_thread_times(0, 2);
 
-	CU_ASSERT(spdk_bdev_io_from_ctx(TAILQ_FIRST(&nvme_ctrlr->pending_resets)) == second_bdev_io);
-
-	ctrlr->fail_reset = true;
+	/* first_bdev_io completes before second_bdev_io is scheduled. */
+	CU_ASSERT(TAILQ_EMPTY(&nvme_ctrlr->pending_resets));
 
 	poll_threads();
 	spdk_delay_us(g_opts.nvme_adminq_poll_period_us);
@@ -4497,7 +4500,7 @@ test_reset_bdev_ctrlr(void)
 	poll_thread_times(0, 1);
 	CU_ASSERT(nvme_ctrlr1->resetting == false);
 	CU_ASSERT(curr_path1->last_failed_tsc == 0);
-	poll_thread_times(0, 1);
+	poll_thread_times(0, 2);
 	CU_ASSERT(first_bio->io_path == io_path12);
 	CU_ASSERT(nvme_ctrlr2->resetting == true);
 
@@ -4570,8 +4573,6 @@ test_reset_bdev_ctrlr(void)
 
 	CU_ASSERT(nvme_ctrlr1->resetting == true);
 	CU_ASSERT(nvme_ctrlr1->ctrlr_op_cb_arg == first_bio);
-	CU_ASSERT(TAILQ_FIRST(&nvme_ctrlr1->pending_resets) ==
-		  (struct nvme_bdev_io *)second_bdev_io->driver_ctx);
 
 	poll_threads();
 	spdk_delay_us(g_opts.nvme_adminq_poll_period_us);
@@ -4611,8 +4612,6 @@ test_reset_bdev_ctrlr(void)
 
 	CU_ASSERT(nvme_ctrlr1->resetting == true);
 	CU_ASSERT(nvme_ctrlr1->ctrlr_op_cb_arg == first_bio);
-	CU_ASSERT(TAILQ_FIRST(&nvme_ctrlr1->pending_resets) ==
-		  (struct nvme_bdev_io *)second_bdev_io->driver_ctx);
 
 	ctrlr2->fail_reset = true;
 
@@ -4663,8 +4662,6 @@ test_reset_bdev_ctrlr(void)
 
 	CU_ASSERT(nvme_ctrlr1->resetting == true);
 	CU_ASSERT(nvme_ctrlr1->ctrlr_op_cb_arg == first_bio);
-	CU_ASSERT(TAILQ_FIRST(&nvme_ctrlr1->pending_resets) ==
-		  (struct nvme_bdev_io *)second_bdev_io->driver_ctx);
 
 	ctrlr1->fail_reset = true;
 
@@ -4715,8 +4712,6 @@ test_reset_bdev_ctrlr(void)
 
 	CU_ASSERT(nvme_ctrlr1->resetting == true);
 	CU_ASSERT(nvme_ctrlr1->ctrlr_op_cb_arg == first_bio);
-	CU_ASSERT(TAILQ_FIRST(&nvme_ctrlr1->pending_resets) ==
-		  (struct nvme_bdev_io *)second_bdev_io->driver_ctx);
 
 	ctrlr1->fail_reset = true;
 	ctrlr2->fail_reset = true;
@@ -8350,8 +8345,6 @@ test_race_between_clear_pending_resets_and_reset_ctrlr_complete(void)
 
 	/* For simplicity, skip freezing bdev channels. */
 	bdev_nvme_freeze_bdev_channel_done(nbdev, bio, 0);
-
-	CU_ASSERT(spdk_bdev_io_from_ctx(TAILQ_FIRST(&nvme_ctrlr->pending_resets)) == bdev_io);
 
 	poll_thread_times(0, 1);
 
