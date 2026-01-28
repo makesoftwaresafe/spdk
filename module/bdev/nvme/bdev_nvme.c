@@ -3116,16 +3116,17 @@ _bdev_nvme_reset_io_continue(void *ctx)
 
 	next_io_path = STAILQ_NEXT(prev_io_path, stailq);
 	if (next_io_path == NULL) {
-		goto complete;
-	}
-
-	rc = _bdev_nvme_reset_io(next_io_path, bio);
-	if (rc == 0) {
+		bdev_nvme_reset_io_complete(bio);
 		return;
 	}
 
-complete:
-	bdev_nvme_reset_io_complete(bio);
+	rc = _bdev_nvme_reset_io(next_io_path, bio);
+	if (rc != 0) {
+		/* If the current nvme_ctrlr is disabled, skip it and move to the next nvme_ctrlr. */
+		rc = (rc == -EALREADY) ? 0 : rc;
+
+		bdev_nvme_reset_io_continue(bio, rc);
+	}
 }
 
 static void
@@ -3144,6 +3145,8 @@ bdev_nvme_reset_io_continue(void *cb_arg, int rc)
 		bio->cpl.cdw0 = 0;
 	}
 
+	/* TODO: Bug here, cached io_path in bio can be removed from the channel's
+	 * io_path list during namespace depopulate causing undefined behavior. */
 	spdk_thread_send_msg(spdk_bdev_io_get_thread(bdev_io), _bdev_nvme_reset_io_continue, bio);
 }
 
