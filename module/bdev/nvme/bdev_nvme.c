@@ -3168,6 +3168,9 @@ _bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio)
 		 * upper level. If they are in the middle of a reset, we won't try to schedule another one.
 		 */
 		TAILQ_INSERT_TAIL(&nvme_ctrlr->pending_resets, bio, retry_link);
+		pthread_mutex_unlock(&nvme_ctrlr->mutex);
+		NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p was queued to ctrlr.\n", bio);
+		return 0;
 	}
 	pthread_mutex_unlock(&nvme_ctrlr->mutex);
 
@@ -3176,17 +3179,12 @@ _bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio)
 		assert(nvme_ctrlr->ctrlr_op_cb_arg == NULL);
 		nvme_ctrlr->ctrlr_op_cb_fn = bdev_nvme_reset_io_continue;
 		nvme_ctrlr->ctrlr_op_cb_arg = bio;
-
 		spdk_thread_send_msg(spdk_thread_get_app_thread(), msg_fn, nvme_ctrlr);
-
 		NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p started resetting ctrlr.\n", bio);
-	} else if (rc == -EBUSY) {
-		rc = 0;
-		NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p was queued to ctrlr.\n", bio);
-	} else {
-		NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p could not reset ctrlr, rc:%d\n", bio, rc);
+		return 0;
 	}
 
+	NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p could not reset ctrlr, rc:%d\n", bio, rc);
 	return rc;
 }
 
