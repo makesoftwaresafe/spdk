@@ -1,6 +1,6 @@
 /*   SPDX-License-Identifier: BSD-3-Clause
  *   Copyright (C) 2016 Intel Corporation. All rights reserved.
- *   Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *   Copyright (c) 2023, 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include "jsonrpc_internal.h"
@@ -167,6 +167,40 @@ jsonrpc_server_write_cb(void *cb_ctx, const void *data, size_t size)
 	return 0;
 }
 
+static struct spdk_jsonrpc_request *
+jsonrpc_alloc_request(struct spdk_jsonrpc_server_conn *conn)
+{
+	struct spdk_jsonrpc_request *request;
+
+	request = calloc(1, sizeof(*request));
+	if (request == NULL) {
+		return NULL;
+	}
+
+	request->conn = conn;
+
+	pthread_spin_lock(&conn->queue_lock);
+	conn->outstanding_requests++;
+	STAILQ_INSERT_TAIL(&conn->outstanding_queue, request, link);
+	pthread_spin_unlock(&conn->queue_lock);
+
+	request->send_buf_size = SPDK_JSONRPC_SEND_BUF_SIZE_INIT;
+	/* Add extra byte for the null terminator. */
+	request->send_buf = malloc(request->send_buf_size + 1);
+	if (request->send_buf == NULL) {
+		jsonrpc_free_request(request);
+		return NULL;
+	}
+
+	request->response = spdk_json_write_begin(jsonrpc_server_write_cb, request, 0);
+	if (request->response == NULL) {
+		jsonrpc_free_request(request);
+		return NULL;
+	}
+
+	return request;
+}
+
 int
 jsonrpc_parse_request(struct spdk_jsonrpc_server_conn *conn, const void *json, size_t size)
 {
@@ -182,18 +216,11 @@ jsonrpc_parse_request(struct spdk_jsonrpc_server_conn *conn, const void *json, s
 		return 0;
 	}
 
-	request = calloc(1, sizeof(*request));
+	request = jsonrpc_alloc_request(conn);
 	if (request == NULL) {
 		SPDK_DEBUGLOG(rpc, "Out of memory allocating request\n");
 		return -1;
 	}
-
-	pthread_spin_lock(&conn->queue_lock);
-	conn->outstanding_requests++;
-	STAILQ_INSERT_TAIL(&conn->outstanding_queue, request, link);
-	pthread_spin_unlock(&conn->queue_lock);
-
-	request->conn = conn;
 
 	len = end - json;
 	request->recv_buffer = malloc(len + 1);
@@ -217,24 +244,6 @@ jsonrpc_parse_request(struct spdk_jsonrpc_server_conn *conn, const void *json, s
 			jsonrpc_free_request(request);
 			return -1;
 		}
-	}
-
-	request->send_offset = 0;
-	request->send_len = 0;
-	request->send_buf_size = SPDK_JSONRPC_SEND_BUF_SIZE_INIT;
-	/* Add extra byte for the null terminator. */
-	request->send_buf = malloc(request->send_buf_size + 1);
-	if (request->send_buf == NULL) {
-		SPDK_ERRLOG("Failed to allocate send_buf (%zu bytes)\n", request->send_buf_size);
-		jsonrpc_free_request(request);
-		return -1;
-	}
-
-	request->response = spdk_json_write_begin(jsonrpc_server_write_cb, request, 0);
-	if (request->response == NULL) {
-		SPDK_ERRLOG("Failed to allocate response JSON write context.\n");
-		jsonrpc_free_request(request);
-		return -1;
 	}
 
 	if (rc <= 0 || rc > SPDK_JSONRPC_MAX_VALUES) {
