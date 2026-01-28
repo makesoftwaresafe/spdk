@@ -3062,7 +3062,7 @@ nvme_bdev_ctrlr_op_rpc(struct nvme_bdev_ctrlr *nbdev_ctrlr, enum nvme_ctrlr_op o
 	nvme_bdev_ctrlr_op_rpc_continue(ctx, rc);
 }
 
-static int _bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio);
+static void _bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio);
 
 static void
 bdev_nvme_unfreeze_bdev_channel_done(struct nvme_bdev *nbdev, void *ctx, int status)
@@ -3109,7 +3109,6 @@ _bdev_nvme_reset_io_continue(void *ctx)
 {
 	struct nvme_bdev_io *bio = ctx;
 	struct nvme_io_path *prev_io_path, *next_io_path;
-	int rc;
 
 	prev_io_path = bio->io_path;
 	bio->io_path = NULL;
@@ -3120,13 +3119,7 @@ _bdev_nvme_reset_io_continue(void *ctx)
 		return;
 	}
 
-	rc = _bdev_nvme_reset_io(next_io_path, bio);
-	if (rc != 0) {
-		/* If the current nvme_ctrlr is disabled, skip it and move to the next nvme_ctrlr. */
-		rc = (rc == -EALREADY) ? 0 : rc;
-
-		bdev_nvme_reset_io_continue(bio, rc);
-	}
+	_bdev_nvme_reset_io(next_io_path, bio);
 }
 
 static void
@@ -3150,7 +3143,7 @@ bdev_nvme_reset_io_continue(void *cb_arg, int rc)
 	spdk_thread_send_msg(spdk_bdev_io_get_thread(bdev_io), _bdev_nvme_reset_io_continue, bio);
 }
 
-static int
+static void
 _bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio)
 {
 	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(bio);
@@ -3173,22 +3166,29 @@ _bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio)
 		TAILQ_INSERT_TAIL(&nvme_ctrlr->pending_resets, bio, retry_link);
 		pthread_mutex_unlock(&nvme_ctrlr->mutex);
 		NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p was queued to ctrlr.\n", bio);
-		return 0;
+		return;
 	}
 	pthread_mutex_unlock(&nvme_ctrlr->mutex);
 
-	if (rc == 0) {
-		assert(nvme_ctrlr->ctrlr_op_cb_fn == NULL);
-		assert(nvme_ctrlr->ctrlr_op_cb_arg == NULL);
-		nvme_ctrlr->ctrlr_op_cb_fn = bdev_nvme_reset_io_continue;
-		nvme_ctrlr->ctrlr_op_cb_arg = bio;
-		spdk_thread_send_msg(spdk_thread_get_app_thread(), msg_fn, nvme_ctrlr);
-		NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p started resetting ctrlr.\n", bio);
-		return 0;
+	if (rc < 0) {
+		if (rc == -EALREADY) {
+			rc = 0;
+			NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr,
+					  "reset_io %p ctrlr is disabled; skipping reset and moving to next ctrlr\n", bio);
+		} else {
+			NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p could not reset ctrlr, rc:%d\n", bio, rc);
+		}
+
+		bdev_nvme_reset_io_continue(bio, rc);
+		return;
 	}
 
-	NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p could not reset ctrlr, rc:%d\n", bio, rc);
-	return rc;
+	assert(nvme_ctrlr->ctrlr_op_cb_fn == NULL);
+	assert(nvme_ctrlr->ctrlr_op_cb_arg == NULL);
+	nvme_ctrlr->ctrlr_op_cb_fn = bdev_nvme_reset_io_continue;
+	nvme_ctrlr->ctrlr_op_cb_arg = bio;
+	spdk_thread_send_msg(spdk_thread_get_app_thread(), msg_fn, nvme_ctrlr);
+	NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p started resetting ctrlr.\n", bio);
 }
 
 static void
@@ -3198,7 +3198,6 @@ bdev_nvme_freeze_bdev_channel_done(struct nvme_bdev *nbdev, void *ctx, int statu
 	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(bio);
 	struct nvme_bdev_channel *nbdev_ch;
 	struct nvme_io_path *io_path;
-	int rc;
 
 	nbdev_ch = spdk_io_channel_get_ctx(spdk_bdev_io_get_io_channel(bdev_io));
 
@@ -3211,13 +3210,7 @@ bdev_nvme_freeze_bdev_channel_done(struct nvme_bdev *nbdev, void *ctx, int statu
 	io_path = STAILQ_FIRST(&nbdev_ch->io_path_list);
 	assert(io_path != NULL);
 
-	rc = _bdev_nvme_reset_io(io_path, bio);
-	if (rc != 0) {
-		/* If the current nvme_ctrlr is disabled, skip it and move to the next nvme_ctrlr. */
-		rc = (rc == -EALREADY) ? 0 : rc;
-
-		bdev_nvme_reset_io_continue(bio, rc);
-	}
+	_bdev_nvme_reset_io(io_path, bio);
 }
 
 static void
