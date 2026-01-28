@@ -3062,7 +3062,7 @@ nvme_bdev_ctrlr_op_rpc(struct nvme_bdev_ctrlr *nbdev_ctrlr, enum nvme_ctrlr_op o
 	nvme_bdev_ctrlr_op_rpc_continue(ctx, rc);
 }
 
-static void _bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio);
+static void _bdev_nvme_reset_io(struct nvme_bdev_io *bio);
 
 static void
 bdev_nvme_unfreeze_bdev_channel_done(struct nvme_bdev *nbdev, void *ctx, int status)
@@ -3119,7 +3119,8 @@ _bdev_nvme_reset_io_continue(void *ctx)
 		return;
 	}
 
-	_bdev_nvme_reset_io(next_io_path, bio);
+	bio->io_path = next_io_path;
+	_bdev_nvme_reset_io(bio);
 }
 
 static void
@@ -3144,16 +3145,13 @@ bdev_nvme_reset_io_continue(void *cb_arg, int rc)
 }
 
 static void
-_bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio)
+_bdev_nvme_reset_io(struct nvme_bdev_io *bio)
 {
 	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(bio);
 	struct nvme_bdev *nbdev = nbdev_from_bdev(bdev_io->bdev);
-	struct nvme_ctrlr *nvme_ctrlr = io_path->qpair->ctrlr;
+	struct nvme_ctrlr *nvme_ctrlr = bio->io_path->qpair->ctrlr;
 	spdk_msg_fn msg_fn;
 	int rc;
-
-	assert(bio->io_path == NULL);
-	bio->io_path = io_path;
 
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 	rc = bdev_nvme_reset_ctrlr_unsafe(nvme_ctrlr, &msg_fn);
@@ -3206,11 +3204,14 @@ bdev_nvme_freeze_bdev_channel_done(struct nvme_bdev *nbdev, void *ctx, int statu
 	 */
 	bio->cpl.cdw0 = 1;
 
+	assert(bio->io_path == NULL);
+
 	/* Reset all nvme_ctrlrs of a bdev controller sequentially. */
 	io_path = STAILQ_FIRST(&nbdev_ch->io_path_list);
 	assert(io_path != NULL);
 
-	_bdev_nvme_reset_io(io_path, bio);
+	bio->io_path = io_path;
+	_bdev_nvme_reset_io(bio);
 }
 
 static void
