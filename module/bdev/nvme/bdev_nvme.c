@@ -361,6 +361,12 @@ static int nvme_ctrlr_read_ana_log_page(struct nvme_ctrlr *nvme_ctrlr);
 static void nvme_ns_free(struct nvme_ns *ns);
 static void nvme_ns_delete(struct nvme_ns *ns);
 
+static struct nvme_bdev *
+nbdev_from_bdev(struct spdk_bdev *bdev)
+{
+	return SPDK_CONTAINEROF(bdev, struct nvme_bdev, disk);
+}
+
 static int
 nvme_ns_cmp(struct nvme_ns *ns1, struct nvme_ns *ns2)
 {
@@ -1474,8 +1480,7 @@ bdev_nvme_update_nvme_error_stat(struct spdk_bdev_io *bdev_io, const struct spdk
 
 	assert(spdk_nvme_cpl_is_error(cpl));
 
-	nbdev = bdev_io->bdev->ctxt;
-
+	nbdev = nbdev_from_bdev(bdev_io->bdev);
 	if (nbdev->err_stat == NULL) {
 		return;
 	}
@@ -3050,7 +3055,7 @@ static void
 bdev_nvme_reset_io_complete(struct nvme_bdev_io *bio)
 {
 	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(bio);
-	struct nvme_bdev *nbdev = (struct nvme_bdev *)bdev_io->bdev->ctxt;
+	struct nvme_bdev *nbdev = nbdev_from_bdev(bdev_io->bdev);
 
 	/* Abort all queued I/Os for retry. */
 	nvme_bdev_for_each_channel(nbdev,
@@ -3088,7 +3093,7 @@ bdev_nvme_reset_io_continue(void *cb_arg, int rc)
 {
 	struct nvme_bdev_io *bio = cb_arg;
 	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(bio);
-	struct nvme_bdev *nbdev = (struct nvme_bdev *)bdev_io->bdev->ctxt;
+	struct nvme_bdev *nbdev = nbdev_from_bdev(bdev_io->bdev);
 
 	NVME_BDEV_INFOLOG(nbdev, null_ctrlr, "continue reset_io %p, rc:%d\n", bio, rc);
 
@@ -3106,7 +3111,7 @@ static int
 _bdev_nvme_reset_io(struct nvme_io_path *io_path, struct nvme_bdev_io *bio)
 {
 	struct spdk_bdev_io *bdev_io = spdk_bdev_io_from_ctx(bio);
-	struct nvme_bdev *nbdev = (struct nvme_bdev *)bdev_io->bdev->ctxt;
+	struct nvme_bdev *nbdev = nbdev_from_bdev(bdev_io->bdev);
 	struct nvme_ctrlr *nvme_ctrlr = io_path->qpair->ctrlr;
 	spdk_msg_fn msg_fn;
 	int rc;
@@ -3380,7 +3385,7 @@ _bdev_nvme_submit_request(struct nvme_bdev_channel *nbdev_ch, struct spdk_bdev_i
 		break;
 	case SPDK_BDEV_IO_TYPE_RESET:
 		nbdev_io->io_path = NULL;
-		bdev_nvme_reset_io(bdev->ctxt, nbdev_io);
+		bdev_nvme_reset_io(nbdev_from_bdev(bdev), nbdev_io);
 		return;
 
 	case SPDK_BDEV_IO_TYPE_NVME_NSSR:
@@ -5520,8 +5525,7 @@ bdev_nvme_set_preferred_path(const char *name, uint16_t cntlid,
 		goto err_bdev;
 	}
 
-	nbdev = SPDK_CONTAINEROF(bdev, struct nvme_bdev, disk);
-
+	nbdev = nbdev_from_bdev(bdev);
 	ctx->nvme_ns = bdev_nvme_set_preferred_ns(nbdev, cntlid);
 	if (ctx->nvme_ns == NULL) {
 		NVME_BDEV_ERRLOG(nbdev, null_ctrlr, "bdev does not have namespace to controller %u.\n", cntlid);
@@ -5639,7 +5643,8 @@ spdk_bdev_nvme_set_multipath_policy(const char *name, enum spdk_bdev_nvme_multip
 		rc = -ENODEV;
 		goto err_module;
 	}
-	nbdev = SPDK_CONTAINEROF(bdev, struct nvme_bdev, disk);
+
+	nbdev = nbdev_from_bdev(bdev);
 
 	pthread_mutex_lock(&nbdev->mutex);
 	nbdev->mp_policy = policy;
@@ -9203,10 +9208,9 @@ bdev_nvme_get_ctrlr(struct spdk_bdev *bdev)
 		return NULL;
 	}
 
-	nbdev = SPDK_CONTAINEROF(bdev, struct nvme_bdev, disk);
+	nbdev = nbdev_from_bdev(bdev);
 	nvme_ns = TAILQ_FIRST(&nbdev->nvme_ns_list);
 	assert(nvme_ns != NULL);
-
 	return nvme_ns->ctrlr->ctrlr;
 }
 
