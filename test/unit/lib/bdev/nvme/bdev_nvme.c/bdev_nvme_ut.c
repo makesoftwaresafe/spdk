@@ -1749,8 +1749,8 @@ test_failover_ctrlr(void)
 	curr_trid = TAILQ_FIRST(&nvme_ctrlr->trids);
 	SPDK_CU_ASSERT_FATAL(curr_trid != NULL);
 
-	/* Failover starts from thread 1. */
-	set_thread(1);
+	/* Failover starts from thread 0. */
+	set_thread(0);
 
 	/* Case 1: ctrlr is already being destructed. */
 	nvme_ctrlr->destruct = true;
@@ -1785,8 +1785,6 @@ test_failover_ctrlr(void)
 	CU_ASSERT(nvme_ctrlr->resetting == false);
 	CU_ASSERT(curr_trid->last_failed_tsc == 0);
 
-	set_thread(0);
-
 	/* Second, test two trids case. */
 	rc = bdev_nvme_add_secondary_trid(nvme_ctrlr, &ctrlr, &trid2);
 	CU_ASSERT(rc == 0);
@@ -1795,9 +1793,6 @@ test_failover_ctrlr(void)
 	SPDK_CU_ASSERT_FATAL(curr_trid != NULL);
 	CU_ASSERT(curr_trid == nvme_ctrlr->active_path_id);
 	CU_ASSERT(spdk_nvme_transport_id_compare(&curr_trid->trid, &trid1) == 0);
-
-	/* Failover starts from thread 1. */
-	set_thread(1);
 
 	/* Case 4: reset is in progress. */
 	nvme_ctrlr->resetting = true;
@@ -1824,6 +1819,8 @@ test_failover_ctrlr(void)
 	poll_threads();
 
 	CU_ASSERT(nvme_ctrlr->resetting == false);
+
+	set_thread(1);
 
 	spdk_put_io_channel(ch2);
 
@@ -3488,6 +3485,7 @@ test_reconnect_qpair(void)
 	ctrlr->is_failed = true;
 
 	poll_thread_times(1, 3);
+	poll_thread_times(0, 1);
 	CU_ASSERT(nvme_qpair1->qpair != NULL);
 	CU_ASSERT(nvme_qpair2->qpair == NULL);
 	CU_ASSERT(nvme_ctrlr->resetting == true);
@@ -3527,6 +3525,7 @@ test_reconnect_qpair(void)
 	ctrlr->fail_reset = true;
 
 	poll_thread_times(1, 3);
+	poll_thread_times(0, 1);
 	CU_ASSERT(nvme_qpair1->qpair != NULL);
 	CU_ASSERT(nvme_qpair2->qpair == NULL);
 	CU_ASSERT(nvme_ctrlr->resetting == true);
@@ -5786,7 +5785,7 @@ test_retry_io_if_ctrlr_is_resetting(void)
 	nvme_qpair->qpair->failure_reason = SPDK_NVME_QPAIR_FAILURE_UNKNOWN;
 	ctrlr->is_failed = true;
 
-	poll_thread_times(0, 5);
+	poll_thread_times(0, 6);
 
 	CU_ASSERT(nvme_qpair->qpair == NULL);
 	CU_ASSERT(nvme_ctrlr->resetting == true);
@@ -8295,6 +8294,8 @@ test_race_between_clear_pending_resets_and_reset_ctrlr_complete(void)
 	SPDK_CU_ASSERT_FATAL(ctrlr_ch2 != NULL);
 
 	/* Internal reset request started. */
+	set_thread(0);
+
 	rc = bdev_nvme_failover_ctrlr(nvme_ctrlr);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(nvme_ctrlr->resetting == true);
@@ -8326,8 +8327,6 @@ test_race_between_clear_pending_resets_and_reset_ctrlr_complete(void)
 	CU_ASSERT(ctrlr_ch1->qpair->qpair != NULL);
 	CU_ASSERT(ctrlr_ch2->qpair->qpair != NULL);
 	CU_ASSERT(nvme_ctrlr->resetting == true);
-
-	set_thread(0);
 
 	/* Submit external reset request from bdev_io just one polling before completing
 	 * internal before reset request.

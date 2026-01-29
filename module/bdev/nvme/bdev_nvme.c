@@ -354,6 +354,7 @@ static void bdev_nvme_abort(struct nvme_bdev_channel *nbdev_ch,
 			    struct nvme_bdev_io *bio, struct nvme_bdev_io *bio_to_abort);
 static void bdev_nvme_reset_io(struct nvme_bdev *nbdev, struct nvme_bdev_io *bio);
 static int bdev_nvme_failover_ctrlr(struct nvme_ctrlr *nvme_ctrlr);
+static void bdev_nvme_failover_ctrlr_async(struct nvme_ctrlr *nvme_ctrlr);
 static void remove_cb(void *cb_ctx, struct spdk_nvme_ctrlr *ctrlr);
 static int nvme_ctrlr_read_ana_log_page(struct nvme_ctrlr *nvme_ctrlr);
 
@@ -1884,7 +1885,7 @@ bdev_nvme_disconnected_qpair_cb(struct spdk_nvme_qpair *qpair, void *poll_group_
 	if (ctrlr_ch->reset_iter == NULL) {
 		NVME_CTRLR_INFOLOG(nvme_ctrlr,
 				   NVME_QPAIR_LOG_FMT" was disconnected and freed. reset controller.\n", qid, qpair);
-		bdev_nvme_failover_ctrlr(nvme_ctrlr);
+		bdev_nvme_failover_ctrlr_async(nvme_ctrlr);
 		return;
 	}
 
@@ -2130,6 +2131,8 @@ bdev_nvme_failover_trid(struct nvme_ctrlr *nvme_ctrlr, bool remove, bool start)
 {
 	struct spdk_nvme_path_id *path_id, *next_path;
 	int rc __attribute__((unused));
+
+	assert(spdk_thread_is_app_thread(NULL));
 
 	path_id = TAILQ_FIRST(&nvme_ctrlr->trids);
 	assert(path_id);
@@ -3247,6 +3250,8 @@ bdev_nvme_reset_io(struct nvme_bdev *nbdev, struct nvme_bdev_io *bio)
 static int
 bdev_nvme_failover_ctrlr_unsafe(struct nvme_ctrlr *nvme_ctrlr, bool remove)
 {
+	assert(spdk_thread_is_app_thread(NULL));
+
 	if (nvme_ctrlr->destruct) {
 		/* Don't bother resetting if the controller is in the process of being destructed. */
 		return -ENXIO;
@@ -3297,6 +3302,8 @@ bdev_nvme_failover_ctrlr(struct nvme_ctrlr *nvme_ctrlr)
 {
 	int rc;
 
+	assert(spdk_thread_is_app_thread(NULL));
+
 	pthread_mutex_lock(&nvme_ctrlr->mutex);
 	rc = bdev_nvme_failover_ctrlr_unsafe(nvme_ctrlr, false);
 	pthread_mutex_unlock(&nvme_ctrlr->mutex);
@@ -3308,6 +3315,20 @@ bdev_nvme_failover_ctrlr(struct nvme_ctrlr *nvme_ctrlr)
 	}
 
 	return rc;
+}
+
+static void
+bdev_nvme_failover_ctrlr_msg(void *ctx)
+{
+	struct nvme_ctrlr *nvme_ctrlr = ctx;
+
+	bdev_nvme_failover_ctrlr(nvme_ctrlr);
+}
+
+static void
+bdev_nvme_failover_ctrlr_async(struct nvme_ctrlr *nvme_ctrlr)
+{
+	spdk_thread_send_msg(spdk_thread_get_app_thread(), bdev_nvme_failover_ctrlr_msg, nvme_ctrlr);
 }
 
 static int bdev_nvme_unmap(struct nvme_bdev_io *bio, uint64_t offset_blocks,
