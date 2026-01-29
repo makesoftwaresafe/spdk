@@ -16,7 +16,7 @@ function starttarget() {
 	nvmftestinit
 
 	# Start the target
-	nvmfappstart -m 0x1E
+	nvmfappstart -m 0xE
 
 	$rpc_py nvmf_create_transport $NVMF_TRANSPORT_OPTS -u 8192
 
