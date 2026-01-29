@@ -123,6 +123,7 @@ struct nvme_ctrlr {
 	TAILQ_ENTRY(nvme_ctrlr)			tailq;
 	struct nvme_bdev_ctrlr			*nbdev_ctrlr;
 
+	/* This list can only be accessed from the app thread. */
 	TAILQ_HEAD(nvme_paths, spdk_nvme_path_id)	trids;
 
 	uint32_t				max_ana_log_page_size;
@@ -134,7 +135,7 @@ struct nvme_ctrlr {
 	struct spdk_key				*dhchap_key;
 	struct spdk_key				*dhchap_ctrlr_key;
 
-	/* Used for ref, flags, trid list protection. */
+	/* Used for ref, flags protection. */
 	pthread_mutex_t				mutex;
 };
 

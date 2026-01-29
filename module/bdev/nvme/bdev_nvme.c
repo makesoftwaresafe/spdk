@@ -6679,8 +6679,6 @@ bdev_nvme_add_secondary_trid(struct nvme_ctrlr *nvme_ctrlr,
 	assert(nvme_ctrlr != NULL);
 	assert(spdk_thread_is_app_thread(NULL));
 
-	pthread_mutex_lock(&nvme_ctrlr->mutex);
-
 	rc = bdev_nvme_check_secondary_trid(nvme_ctrlr, new_ctrlr, trid);
 	if (rc != 0) {
 		goto exit;
@@ -6694,10 +6692,7 @@ bdev_nvme_add_secondary_trid(struct nvme_ctrlr *nvme_ctrlr,
 	rc = _bdev_nvme_add_secondary_trid(nvme_ctrlr, trid);
 
 exit:
-	pthread_mutex_unlock(&nvme_ctrlr->mutex);
-
 	spdk_nvme_detach(new_ctrlr);
-
 	return rc;
 }
 
@@ -7048,14 +7043,11 @@ nvme_path_id_exists(const char *name, const struct spdk_nvme_path_id *path_id)
 	}
 
 	TAILQ_FOREACH(ctrlr, &nbdev_ctrlr->ctrlrs, tailq) {
-		pthread_mutex_lock(&ctrlr->mutex);
 		TAILQ_FOREACH(p, &ctrlr->trids, link) {
 			if (nvme_path_id_compare(p, path_id)) {
-				pthread_mutex_unlock(&ctrlr->mutex);
 				return true;
 			}
 		}
-		pthread_mutex_unlock(&ctrlr->mutex);
 	}
 
 	return false;
@@ -7093,8 +7085,6 @@ _bdev_nvme_delete(struct nvme_ctrlr *nvme_ctrlr, const struct spdk_nvme_path_id 
 
 	assert(spdk_thread_is_app_thread(NULL));
 
-	pthread_mutex_lock(&nvme_ctrlr->mutex);
-
 	TAILQ_FOREACH_REVERSE_SAFE(p, &nvme_ctrlr->trids, nvme_paths, link, t) {
 		if (p == TAILQ_FIRST(&nvme_ctrlr->trids)) {
 			break;
@@ -7111,7 +7101,6 @@ _bdev_nvme_delete(struct nvme_ctrlr *nvme_ctrlr, const struct spdk_nvme_path_id 
 	}
 
 	if (p == NULL || !nvme_path_id_compare(p, path_id)) {
-		pthread_mutex_unlock(&nvme_ctrlr->mutex);
 		return rc;
 	}
 
@@ -7136,7 +7125,6 @@ _bdev_nvme_delete(struct nvme_ctrlr *nvme_ctrlr, const struct spdk_nvme_path_id 
 		rc = 0;
 	}
 
-	pthread_mutex_unlock(&nvme_ctrlr->mutex);
 	return rc;
 }
 
