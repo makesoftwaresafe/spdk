@@ -2680,7 +2680,7 @@ _bdev_nvme_reset_ctrlr(void *ctx)
 }
 
 static int
-bdev_nvme_reset_ctrlr_unsafe(struct nvme_ctrlr *nvme_ctrlr, spdk_msg_fn *msg_fn)
+bdev_nvme_get_reset_ctrlr_fn(struct nvme_ctrlr *nvme_ctrlr, spdk_msg_fn *msg_fn)
 {
 	assert(spdk_thread_is_app_thread(NULL));
 
@@ -2698,6 +2698,8 @@ bdev_nvme_reset_ctrlr_unsafe(struct nvme_ctrlr *nvme_ctrlr, spdk_msg_fn *msg_fn)
 		return -EALREADY;
 	}
 
+	pthread_mutex_lock(&nvme_ctrlr->mutex);
+
 	nvme_ctrlr->resetting = true;
 	nvme_ctrlr->dont_retry = true;
 
@@ -2708,6 +2710,8 @@ bdev_nvme_reset_ctrlr_unsafe(struct nvme_ctrlr *nvme_ctrlr, spdk_msg_fn *msg_fn)
 	} else {
 		*msg_fn = _bdev_nvme_reset_ctrlr;
 	}
+
+	pthread_mutex_unlock(&nvme_ctrlr->mutex);
 
 	if (nvme_ctrlr->reset_start_tsc == 0) {
 		nvme_ctrlr->reset_start_tsc = spdk_get_ticks();
@@ -2724,9 +2728,7 @@ bdev_nvme_reset_ctrlr(struct nvme_ctrlr *nvme_ctrlr)
 
 	assert(spdk_thread_is_app_thread(NULL));
 
-	pthread_mutex_lock(&nvme_ctrlr->mutex);
-	rc = bdev_nvme_reset_ctrlr_unsafe(nvme_ctrlr, &msg_fn);
-	pthread_mutex_unlock(&nvme_ctrlr->mutex);
+	rc = bdev_nvme_get_reset_ctrlr_fn(nvme_ctrlr, &msg_fn);
 	if (rc == 0) {
 		/* Ensure completion is async otherwise ctrlr_op_cb_fn might not be set yet. */
 		spdk_thread_send_msg(spdk_thread_get_app_thread(), msg_fn, nvme_ctrlr);
@@ -3158,8 +3160,7 @@ _bdev_nvme_reset_io_msg(void *ctx)
 
 	assert(spdk_thread_is_app_thread(NULL));
 
-	pthread_mutex_lock(&nvme_ctrlr->mutex);
-	rc = bdev_nvme_reset_ctrlr_unsafe(nvme_ctrlr, &reset_fn);
+	rc = bdev_nvme_get_reset_ctrlr_fn(nvme_ctrlr, &reset_fn);
 	if (rc == -EBUSY) {
 		/*
 		 * Reset call is queued only if it is from the app framework. This is on purpose so that
@@ -3167,11 +3168,9 @@ _bdev_nvme_reset_io_msg(void *ctx)
 		 * upper level. If they are in the middle of a reset, we won't try to schedule another one.
 		 */
 		TAILQ_INSERT_TAIL(&nvme_ctrlr->pending_resets, bio, retry_link);
-		pthread_mutex_unlock(&nvme_ctrlr->mutex);
 		NVME_BDEV_INFOLOG(nbdev, nvme_ctrlr, "reset_io %p was queued to ctrlr.\n", bio);
 		return;
 	}
-	pthread_mutex_unlock(&nvme_ctrlr->mutex);
 
 	if (rc < 0) {
 		if (rc == -EALREADY) {
