@@ -161,6 +161,8 @@ int spdk_bdev_nvme_delete(const char *name, const struct spdk_nvme_path_id *path
 /**
  * Set multipath policy of the NVMe bdev.
  *
+ * Subsequent calls for the same bdev must wait until the current execution finishes.
+ *
  * \param name NVMe bdev name.
  * \param policy Multipath policy (active-passive or active-active).
  * \param selector Multipath selector (round_robin, queue_depth).

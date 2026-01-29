@@ -5562,10 +5562,9 @@ bdev_nvme_set_multipath_policy_done(struct nvme_bdev *nbdev, void *_ctx, int sta
 	assert(ctx->desc != NULL);
 	assert(ctx->cb_fn != NULL);
 
+	nbdev->multipath_conf_updating = false;
 	spdk_bdev_close(ctx->desc);
-
 	ctx->cb_fn(ctx->cb_arg, status);
-
 	free(ctx);
 }
 
@@ -5645,6 +5644,13 @@ spdk_bdev_nvme_set_multipath_policy(const char *name, enum spdk_bdev_nvme_multip
 	}
 
 	nbdev = nbdev_from_bdev(bdev);
+	if (nbdev->multipath_conf_updating) {
+		NVME_BDEV_ERRLOG(nbdev, null_ctrlr, "multipath configuration update in progress.\n");
+		rc = -EBUSY;
+		goto err_module;
+	}
+
+	nbdev->multipath_conf_updating = true;
 
 	pthread_mutex_lock(&nbdev->mutex);
 	nbdev->mp_policy = policy;
