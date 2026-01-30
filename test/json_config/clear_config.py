@@ -11,8 +11,13 @@ from spdk.rpc.client import JSONRPCClient, JSONRPCException
 
 
 def flatten_config(config):
-    """Iterate over config entries."""
-    yield from config
+    """Flatten config entries, expanding any batch arrays."""
+    for entry in config:
+        if isinstance(entry, list):
+            # Batch array - yield each element
+            yield from entry
+        else:
+            yield entry
 
 
 def get_bdev_name_key(bdev):

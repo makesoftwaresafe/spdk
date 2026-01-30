@@ -54,6 +54,9 @@ def filter_methods(do_remove_global_rpcs):
 
     def filter_config_entry(config):
         """Return the config entry if it passes the global RPC filter, otherwise None."""
+        if isinstance(config, list):
+            filtered_batch = [e for e in config if filter_config_entry(e) is not None]
+            return filtered_batch if filtered_batch else None
         m_name = config['method']
         is_global_rpc = m_name in global_rpcs
         if do_remove_global_rpcs != is_global_rpc:
@@ -84,11 +87,18 @@ def check_empty():
     if not data:
         raise EOFError("Can't read config!")
 
+    def is_empty_batch(config):
+        """Check if config entry is an empty batch array."""
+        return isinstance(config, list) and len(config) == 0
+
     for s in data['subsystems']:
         if s['config']:
-            print("Config not empty")
-            print(s['config'])
-            sys.exit(1)
+            # Filter out empty batch arrays
+            non_empty = [c for c in s['config'] if not is_empty_batch(c)]
+            if non_empty:
+                print("Config not empty")
+                print(non_empty)
+                sys.exit(1)
 
 
 if __name__ == "__main__":
