@@ -52,16 +52,23 @@ def filter_methods(do_remove_global_rpcs):
         'fsdev_set_opts',
     ]
 
+    def filter_config_entry(config):
+        """Return the config entry if it passes the global RPC filter, otherwise None."""
+        m_name = config['method']
+        is_global_rpc = m_name in global_rpcs
+        if do_remove_global_rpcs != is_global_rpc:
+            return config
+        return None
+
     data = json.loads(sys.stdin.read())
     out = {'subsystems': []}
     for s in data['subsystems']:
         if s['config']:
             s_config = []
             for config in s['config']:
-                m_name = config['method']
-                is_global_rpc = m_name in global_rpcs
-                if do_remove_global_rpcs != is_global_rpc:
-                    s_config.append(config)
+                filtered = filter_config_entry(config)
+                if filtered is not None:
+                    s_config.append(filtered)
         else:
             s_config = None
         out['subsystems'].append({
