@@ -51,6 +51,14 @@ def save_config(client, fd, indent=2, subsystems=None):
     _json_dump(config, fd, indent)
 
 
+def _validate_config_elem(elem, allowed_methods):
+    """Validate a config element.
+    Raises JSONRPCException if invalid.
+    """
+    if 'method' not in elem or elem['method'] not in allowed_methods:
+        raise rpc_client.JSONRPCException("Unknown method was included in the config file")
+
+
 def load_config(client, fd, include_aliases=False):
     """Configure SPDK subsystems and targets using JSON RPC read from stdin.
     Args:
@@ -73,8 +81,7 @@ def load_config(client, fd, include_aliases=False):
     for subsystem in list(subsystems):
         config = subsystem['config']
         for elem in list(config):
-            if 'method' not in elem or elem['method'] not in allowed_methods:
-                raise rpc_client.JSONRPCException("Unknown method was included in the config file")
+            _validate_config_elem(elem, allowed_methods)
 
     while subsystems:
         allowed_methods = client.rpc_get_methods(current=True, include_aliases=include_aliases)
@@ -132,8 +139,7 @@ def load_subsystem_config(client, fd):
     allowed_methods = client.rpc_get_methods()
     config = subsystem['config']
     for elem in list(config):
-        if 'method' not in elem or elem['method'] not in allowed_methods:
-            raise rpc_client.JSONRPCException("Unknown method was included in the config file")
+        _validate_config_elem(elem, allowed_methods)
 
     allowed_methods = client.rpc_get_methods(current=True)
     for elem in list(config):
