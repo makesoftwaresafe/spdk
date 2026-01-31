@@ -59,6 +59,18 @@ def _validate_config_elem(elem, allowed_methods):
         raise rpc_client.JSONRPCException("Unknown method was included in the config file")
 
 
+def _process_config_elem(client, elem, config, allowed_methods):
+    """Process a config element.
+    Returns True if method was called, False otherwise.
+    Removes processed element from config.
+    """
+    if 'method' not in elem or elem['method'] not in allowed_methods:
+        return False
+    client.call(**elem)
+    config.remove(elem)
+    return True
+
+
 def load_config(client, fd, include_aliases=False):
     """Configure SPDK subsystems and targets using JSON RPC read from stdin.
     Args:
@@ -90,12 +102,8 @@ def load_config(client, fd, include_aliases=False):
         for subsystem in list(subsystems):
             config = subsystem['config']
             for elem in list(config):
-                if 'method' not in elem or elem['method'] not in allowed_methods:
-                    continue
-
-                client.call(**elem)
-                config.remove(elem)
-                allowed_found = True
+                if _process_config_elem(client, elem, config, allowed_methods):
+                    allowed_found = True
 
             if not config:
                 subsystems.remove(subsystem)
@@ -143,11 +151,7 @@ def load_subsystem_config(client, fd):
 
     allowed_methods = client.rpc_get_methods(current=True)
     for elem in list(config):
-        if 'method' not in elem or elem['method'] not in allowed_methods:
-            continue
-
-        client.call(**elem)
-        config.remove(elem)
+        _process_config_elem(client, elem, config, allowed_methods)
 
     if config:
         print("Some configs were skipped because they cannot be called in the current RPC state.")
