@@ -12,16 +12,9 @@ apt-get install -y gcc g++ make libcunit1-dev libaio-dev libssl-dev libjson-c-de
 
 # per PEP668 work inside virtual env
 virtdir=${PIP_VIRTDIR:-/var/spdk/dependencies/pip}
-if python3 -c 'import sys; exit(0 if sys.version_info >= (3,9) else 1)'; then
-	python3 -m venv --upgrade-deps --system-site-packages "$virtdir"
-else
-	# --upgrade-deps was introduced only in Python 3.9.0 (October 5, 2020).
-	python3 -m venv --system-site-packages "$virtdir"
-	"$virtdir"/bin/pip install --upgrade pip setuptools
-fi
-pkgdep_toolpath pip "$virtdir/bin"
+python3 -m venv --system-site-packages "$virtdir"
 source "$virtdir/bin/activate"
-python -m pip install pip-tools
+python -m pip install -U "pip<26" setuptools wheel pip-tools
 pip-compile --extra dev --strip-extras -o "$rootdir/scripts/pkgdep/requirements.txt" "${rootdir}/python/pyproject.toml"
 pip3 install -r "$rootdir/scripts/pkgdep/requirements.txt"
 

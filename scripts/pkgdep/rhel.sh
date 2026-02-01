@@ -119,19 +119,9 @@ fi
 
 # per PEP668 work inside virtual env
 virtdir=${PIP_VIRTDIR:-/var/spdk/dependencies/pip}
-if python3 -c 'import sys; exit(0 if sys.version_info >= (3,9) else 1)'; then
-	python3 -m venv --upgrade-deps --system-site-packages "$virtdir"
-else
-	# --upgrade-deps was introduced only in Python 3.9.0 (October 5, 2020).
-	python3 -m venv --system-site-packages "$virtdir"
-	# pip3, which is shipped with centos8 and rocky8, is currently providing faulty ninja binary
-	# which segfaults at each run. To workaround it, upgrade pip itself and then use it for each
-	# package - new pip will provide ninja at the same version but with the actually working
-	# binary.
-	"$virtdir"/bin/pip install --upgrade pip setuptools
-fi
+python3 -m venv --system-site-packages "$virtdir"
 source "$virtdir/bin/activate"
-python -m pip install pip-tools
+python -m pip install -U "pip<26" setuptools wheel pip-tools
 pip-compile --extra dev --strip-extras -o "$rootdir/scripts/pkgdep/requirements.txt" "${rootdir}/python/pyproject.toml"
 python -m pip install -r "$rootdir/scripts/pkgdep/requirements.txt"
 

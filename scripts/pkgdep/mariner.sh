@@ -74,9 +74,9 @@ fi
 
 # per PEP668 work inside virtual env
 virtdir=${PIP_VIRTDIR:-/var/spdk/dependencies/pip}
-python3 -m venv --upgrade-deps --system-site-packages "$virtdir"
+python3 -m venv --system-site-packages "$virtdir"
 source "$virtdir/bin/activate"
-python -m pip install pip-tools
+python -m pip install -U "pip<26" setuptools wheel pip-tools
 pip-compile --extra dev --strip-extras -o "$rootdir/scripts/pkgdep/requirements.txt" "${rootdir}/python/pyproject.toml"
 pip3 install -r "$rootdir/scripts/pkgdep/requirements.txt"
 
