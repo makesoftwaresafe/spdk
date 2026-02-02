@@ -11,7 +11,9 @@ the function could return a status before all queues were actually disconnected.
 In the current version, the function will invoke the callback only after all
 disconnect operations have completed or the provided timeout has been exceeded.
 If the function is called with the timeout set to 0, the default timeout value
-equal to `NVMF_CTRLR_RESET_SHN_TIMEOUT_IN_MS` is used.
+equal to `NVMF_CTRLR_RESET_SHN_TIMEOUT_IN_MS` is used. The
+`nvmf_subsystem_remove_host` json-rpc methods also reflects to above behavior and
+allow to configure the timeout now.
 
 ## v26.01
 

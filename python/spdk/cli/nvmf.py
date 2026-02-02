@@ -381,12 +381,16 @@ def add_parser(subparsers):
         args.client.nvmf_subsystem_remove_host(
                                             nqn=args.nqn,
                                             host=args.host,
-                                            tgt_name=args.tgt_name)
+                                            tgt_name=args.tgt_name,
+                                            timeout_ms=args.timeout_ms)
 
     p = subparsers.add_parser('nvmf_subsystem_remove_host', help='Remove a host from an NVMe-oF subsystem')
     p.add_argument('nqn', help='NVMe-oF subsystem NQN')
     p.add_argument('host', help='Host NQN to remove')
     p.add_argument('-t', '--tgt-name', help='The name of the parent NVMe-oF target (optional)', type=str)
+    p.add_argument('-T', '--timeout-ms',
+                   help='Timeout in ms to wait for I/Os to complete (optional). Default value is derived from the controller CAP.TO.',
+                   type=int)
     p.set_defaults(func=nvmf_subsystem_remove_host)
 
     def nvmf_subsystem_set_keys(args):

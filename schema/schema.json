@@ -3878,6 +3878,11 @@
           "name": "tgt_name",
           "type": "string",
           "description": "Parent NVMe-oF target name."
+        },
+        {
+          "name": "timeout_ms",
+          "type": "uint64",
+          "description": "Timeout in ms to wait for I/Os to complete (optional). Default value is derived from the controller CAP.TO."
         }
       ]
     },

@@ -1976,6 +1976,7 @@ struct nvmf_rpc_host_ctx {
 	char *dhchap_key;
 	char *dhchap_ctrlr_key;
 	bool allow_any_host;
+	uint64_t timeout_ms;
 };
 
 static const struct spdk_json_object_decoder rpc_nvmf_subsystem_add_host_decoders[] = {
@@ -2074,7 +2075,16 @@ rpc_nvmf_subsystem_remove_host_done(void *_ctx, int status)
 {
 	struct nvmf_rpc_host_ctx *ctx = _ctx;
 
-	spdk_jsonrpc_send_bool_response(ctx->request, true);
+	if (status != 0) {
+		if (status == -ETIMEDOUT) {
+			spdk_jsonrpc_send_error_response(ctx->request, SPDK_JSONRPC_ERROR_INTERNAL_ERROR,
+							 "Timeout reached during host removal");
+		} else {
+			spdk_jsonrpc_send_error_response(ctx->request, SPDK_JSONRPC_ERROR_INTERNAL_ERROR, "Internal error");
+		}
+	} else {
+		spdk_jsonrpc_send_bool_response(ctx->request, true);
+	}
 	nvmf_rpc_host_ctx_free(ctx);
 	free(ctx);
 }
@@ -2083,6 +2093,7 @@ static const struct spdk_json_object_decoder rpc_nvmf_subsystem_remove_host_deco
 	{"nqn", offsetof(struct nvmf_rpc_host_ctx, nqn), spdk_json_decode_string},
 	{"host", offsetof(struct nvmf_rpc_host_ctx, host), spdk_json_decode_string},
 	{"tgt_name", offsetof(struct nvmf_rpc_host_ctx, tgt_name), spdk_json_decode_string, true},
+	{"timeout_ms", offsetof(struct nvmf_rpc_host_ctx, timeout_ms), spdk_json_decode_uint64, true},
 };
 
 static void
@@ -2142,7 +2153,7 @@ rpc_nvmf_subsystem_remove_host(struct spdk_jsonrpc_request *request,
 
 	rc = spdk_nvmf_subsystem_disconnect_host(subsystem, ctx->host,
 			rpc_nvmf_subsystem_remove_host_done,
-			ctx, 0);
+			ctx, ctx->timeout_ms);
 	if (rc != 0) {
 		spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INTERNAL_ERROR, "Internal error");
 		nvmf_rpc_host_ctx_free(ctx);
