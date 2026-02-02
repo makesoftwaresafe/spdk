@@ -197,6 +197,11 @@ F:	lib/json/
 F:	lib/jsonrpc/
 F:	lib/rpc/
 
+JSON-RPC SCHEMA
+M:	Boris Glimcher <Boris.Glimcher@emc.com>
+F:	schema/
+S:	Supported
+
 KEYRING LIBRARIES
 M:	Konrad Sztyber <ksztyber@nvidia.com>
 F:	lib/keyring/
@@ -348,6 +353,12 @@ F:	module/bdev/ocf/
 POSIX SOCK MODULE
 M:	Jacek Kalwas <jacek.kalwas@nutanix.com>
 F:	module/sock/posix/
+S:	Supported
+
+PYTHON FILES
+M:	Boris Glimcher <Boris.Glimcher@emc.com>
+F:	python/
+F:	scripts/*.py
 S:	Supported
 
 RAID BDEV MODULE
