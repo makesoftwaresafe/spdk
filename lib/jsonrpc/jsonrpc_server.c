@@ -131,34 +131,43 @@ invalid:
 }
 
 static int
-jsonrpc_server_write_cb(void *cb_ctx, const void *data, size_t size)
+jsonrpc_grow_send_buf(uint8_t **buf, size_t *buf_size, size_t current_len, size_t required_len)
 {
-	struct spdk_jsonrpc_request *request = cb_ctx;
-	size_t new_size = request->send_buf_size;
+	size_t new_size = *buf_size;
+	uint8_t *new_buf;
 
-	while (new_size - request->send_len < size) {
+	while (new_size - current_len < required_len) {
 		if (new_size >= SPDK_JSONRPC_SEND_BUF_SIZE_MAX) {
 			SPDK_ERRLOG("Send buf exceeded maximum size (%zu)\n",
 				    (size_t)SPDK_JSONRPC_SEND_BUF_SIZE_MAX);
 			return -1;
 		}
-
 		new_size *= 2;
 	}
 
-	if (new_size != request->send_buf_size) {
-		uint8_t *new_buf;
-
+	if (new_size != *buf_size) {
 		/* Add extra byte for the null terminator. */
-		new_buf = realloc(request->send_buf, new_size + 1);
+		new_buf = realloc(*buf, new_size + 1);
 		if (new_buf == NULL) {
-			SPDK_ERRLOG("Resizing send_buf failed (current size %zu, new size %zu)\n",
-				    request->send_buf_size, new_size);
+			SPDK_ERRLOG("Failed to grow send buffer (current size %zu, new size %zu)\n",
+				    *buf_size, new_size);
 			return -1;
 		}
+		*buf = new_buf;
+		*buf_size = new_size;
+	}
 
-		request->send_buf = new_buf;
-		request->send_buf_size = new_size;
+	return 0;
+}
+
+static int
+jsonrpc_server_write_cb(void *cb_ctx, const void *data, size_t size)
+{
+	struct spdk_jsonrpc_request *request = cb_ctx;
+
+	if (jsonrpc_grow_send_buf(&request->send_buf, &request->send_buf_size,
+				  request->send_len, size) != 0) {
+		return -1;
 	}
 
 	memcpy(request->send_buf + request->send_len, data, size);
