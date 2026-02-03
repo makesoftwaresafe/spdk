@@ -164,6 +164,15 @@ void spdk_json_free_object(const struct spdk_json_object_decoder *decoders, size
 size_t spdk_json_val_len(const struct spdk_json_val *val);
 
 /**
+ * Count the number of immediate elements in a JSON array.
+ *
+ * \param val Pointer to a JSON value of type SPDK_JSON_VAL_ARRAY_BEGIN.
+ *
+ * \return Number of elements in the array, or 0 if val is NULL or not an array.
+ */
+size_t spdk_json_array_count(const struct spdk_json_val *val);
+
+/**
  * Compare JSON string with null terminated C string.
  *
  * \return true if strings are equal or false if not

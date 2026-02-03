@@ -18,6 +18,7 @@
 	spdk_json_free_object;
 
 	spdk_json_val_len;
+	spdk_json_array_count;
 	spdk_json_strequal;
 	spdk_json_strdup;
 

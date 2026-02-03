@@ -24,6 +24,29 @@ spdk_json_val_len(const struct spdk_json_val *val)
 	return 1;
 }
 
+size_t
+spdk_json_array_count(const struct spdk_json_val *val)
+{
+	const struct spdk_json_val *elem;
+	const struct spdk_json_val *end;
+	size_t count;
+
+	if (val == NULL || val->type != SPDK_JSON_VAL_ARRAY_BEGIN) {
+		return 0;
+	}
+
+	count = 0;
+	elem = val + 1;
+	end = val + val->len + 1;
+
+	while (elem < end && elem->type != SPDK_JSON_VAL_ARRAY_END) {
+		count++;
+		elem += spdk_json_val_len(elem);
+	}
+
+	return count;
+}
+
 bool
 spdk_json_strequal(const struct spdk_json_val *val, const char *str)
 {
