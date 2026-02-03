@@ -87,6 +87,31 @@ def execute_script(parser, client, timeout, fd):
             exit(1)
 
 
+def run_server(parser, subparsers, plugins, use_go_client):
+    for line in sys.stdin:
+        cmd = shlex.split(line)
+        try:
+            load_plugin(cmd, subparsers, plugins)
+            tmp_args = parser.parse_args(cmd)
+        except SystemExit:
+            print("**STATUS=1", flush=True)
+            continue
+
+        try:
+            if use_go_client:
+                tmp_args.client = JSONRPCGoClient(tmp_args.server_addr,
+                                                    log_level=getattr(logging, tmp_args.verbose.upper()))
+            else:
+                tmp_args.client = JSONRPCClient(
+                    tmp_args.server_addr, tmp_args.port, tmp_args.timeout,
+                    log_level=getattr(logging, tmp_args.verbose.upper()), conn_retries=tmp_args.conn_retries)
+            call_rpc_func(tmp_args)
+            print("**STATUS=0", flush=True)
+        except JSONRPCException as ex:
+            print(ex.message)
+            print("**STATUS=1", flush=True)
+
+
 def load_plugin(args, subparsers, plugins):
     # Create temporary parser, pull out the plugin parameter, load the module, and then run the real argument parser
     plugin_parser = argparse.ArgumentParser(add_help=False)
@@ -131,28 +156,7 @@ def main():
         parser.print_help()
         exit(1)
     if args.is_server:
-        for line in sys.stdin:
-            cmd = shlex.split(line)
-            try:
-                load_plugin(cmd, subparsers, plugins)
-                tmp_args = parser.parse_args(cmd)
-            except SystemExit:
-                print("**STATUS=1", flush=True)
-                continue
-
-            try:
-                if use_go_client:
-                    tmp_args.client = JSONRPCGoClient(tmp_args.server_addr,
-                                                      log_level=getattr(logging, tmp_args.verbose.upper()))
-                else:
-                    tmp_args.client = JSONRPCClient(
-                        tmp_args.server_addr, tmp_args.port, tmp_args.timeout,
-                        log_level=getattr(logging, tmp_args.verbose.upper()), conn_retries=tmp_args.conn_retries)
-                call_rpc_func(tmp_args)
-                print("**STATUS=0", flush=True)
-            except JSONRPCException as ex:
-                print(ex.message)
-                print("**STATUS=1", flush=True)
+        run_server(parser, subparsers, plugins, use_go_client)
         exit(0)
     elif args.dry_run:
         args.client = JSONRPCDryRunClient()
