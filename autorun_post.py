@@ -63,11 +63,21 @@ def generateCoverageReport(output_dir, repo_dir):
         normalizePaths(f, repo_dir)
     if len(covfiles) == 0:
         return
+
+    _lcov_version = subprocess.check_output(['lcov', '--version']).decode('utf-8').lower()
+    lcov_major_version = int(re.search(r'lcov version (\d+)\.', _lcov_version).group(1))
+
+    lcov_opt_prefix = ''
+    genhtml_opt_prefix = ''
+    if lcov_major_version == 1:
+        lcov_opt_prefix = 'lcov_'
+        genhtml_opt_prefix = 'genhtml_'
+
     lcov_opts = [
-        '--rc', 'lcov_branch_coverage=1',
-        '--rc', 'lcov_function_coverage=1',
-        '--rc', 'genhtml_branch_coverage=1',
-        '--rc', 'genhtml_function_coverage=1',
+        '--rc', f'{lcov_opt_prefix}branch_coverage=1',
+        '--rc', f'{lcov_opt_prefix}function_coverage=1',
+        '--rc', f'{genhtml_opt_prefix}branch_coverage=1',
+        '--rc', f'{genhtml_opt_prefix}function_coverage=1',
         '--rc', 'genhtml_legend=1',
         '--rc', 'geninfo_all_blocks=1',
     ]
