@@ -1189,7 +1189,7 @@ def add_parser(subparsers):
     they are online or configuring or offline. 'online' is the raid bdev which is registered with bdev layer. 'configuring'
     is the raid bdev which does not have full configuration discovered yet. 'offline' is the raid bdev which is not registered
     with bdev as of now and it has encountered any error or user has requested to offline the raid bdev""")
-    p.add_argument('category', help='all or online or configuring or offline')
+    p.add_argument('category', choices=['all', 'online', 'configuring', 'offline'], help='all or online or configuring or offline')
     p.set_defaults(func=bdev_raid_get_bdevs)
 
     def bdev_raid_create(args):
