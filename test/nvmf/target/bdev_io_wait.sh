@@ -10,6 +10,7 @@ source $rootdir/test/nvmf/common.sh
 
 MALLOC_BDEV_SIZE=64
 MALLOC_BLOCK_SIZE=512
+NQN=nqn.2016-06.io.spdk:cnode1
 
 nvmftestinit
 nvmfappstart -m 0xF --wait-for-rpc
@@ -20,9 +21,9 @@ $rpc_py framework_start_init
 $rpc_py nvmf_create_transport $NVMF_TRANSPORT_OPTS -u 8192
 
 $rpc_py bdev_malloc_create $MALLOC_BDEV_SIZE $MALLOC_BLOCK_SIZE -b Malloc0
-$rpc_py nvmf_create_subsystem nqn.2016-06.io.spdk:cnode1 -a -s SPDK00000000000001
-$rpc_py nvmf_subsystem_add_ns nqn.2016-06.io.spdk:cnode1 Malloc0
-$rpc_py nvmf_subsystem_add_listener nqn.2016-06.io.spdk:cnode1 -t $TEST_TRANSPORT -a $NVMF_FIRST_TARGET_IP -s $NVMF_PORT
+$rpc_py nvmf_create_subsystem $NQN -a -s SPDK00000000000001
+$rpc_py nvmf_subsystem_add_ns $NQN Malloc0
+$rpc_py nvmf_subsystem_add_listener $NQN -t $TEST_TRANSPORT -a $NVMF_FIRST_TARGET_IP -s $NVMF_PORT
 
 BDEV_SIZE_LIMIT="-s 256"
 if ((${#NO_HUGE[@]})); then
