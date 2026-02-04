@@ -8,6 +8,7 @@
 
 #include "spdk/rpc.h"
 #include "spdk/util.h"
+#include "spdk_internal/rpc_autogen.h"
 
 static void
 rpc_dpdk_cryptodev_scan_accel_module(struct spdk_jsonrpc_request *request,
@@ -25,19 +26,15 @@ rpc_dpdk_cryptodev_scan_accel_module(struct spdk_jsonrpc_request *request,
 SPDK_RPC_REGISTER("dpdk_cryptodev_scan_accel_module", rpc_dpdk_cryptodev_scan_accel_module,
 		  SPDK_RPC_STARTUP)
 
-struct rpc_set_driver {
-	char *driver_name;
-};
-
 static const struct spdk_json_object_decoder rpc_dpdk_cryptodev_set_driver_decoders[] = {
-	{"driver_name", offsetof(struct rpc_set_driver, driver_name), spdk_json_decode_string},
+	{"driver_name", offsetof(struct rpc_dpdk_cryptodev_set_driver_ctx, driver_name), spdk_json_decode_string},
 };
 
 static void
 rpc_dpdk_cryptodev_set_driver(struct spdk_jsonrpc_request *request,
 			      const struct spdk_json_val *params)
 {
-	struct rpc_set_driver req = {};
+	struct rpc_dpdk_cryptodev_set_driver_ctx req = {};
 	int rc;
 
 	if (spdk_json_decode_object(params, rpc_dpdk_cryptodev_set_driver_decoders,
@@ -48,7 +45,7 @@ rpc_dpdk_cryptodev_set_driver(struct spdk_jsonrpc_request *request,
 	}
 
 	rc = accel_dpdk_cryptodev_set_driver(req.driver_name);
-	free(req.driver_name);
+	free_rpc_dpdk_cryptodev_set_driver(&req);
 	if (rc) {
 		spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS,
 						 "incorrect driver name");

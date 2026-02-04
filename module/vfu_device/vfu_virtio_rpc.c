@@ -11,28 +11,19 @@
 #include "spdk/util.h"
 #include "spdk/thread.h"
 #include "spdk/config.h"
+#include "spdk_internal/rpc_autogen.h"
 
 #include "vfu_virtio_internal.h"
 
-struct rpc_delete_vfu_endpoint {
-	char		*name;
-};
-
 static const struct spdk_json_object_decoder rpc_vfu_virtio_delete_endpoint_decoders[] = {
-	{"name", offsetof(struct rpc_delete_vfu_endpoint, name), spdk_json_decode_string }
+	{"name", offsetof(struct rpc_vfu_virtio_delete_endpoint_ctx, name), spdk_json_decode_string }
 };
-
-static void
-free_rpc_delete_vfu_endpoint(struct rpc_delete_vfu_endpoint *req)
-{
-	free(req->name);
-}
 
 static void
 rpc_vfu_virtio_delete_endpoint(struct spdk_jsonrpc_request *request,
 			       const struct spdk_json_val *params)
 {
-	struct rpc_delete_vfu_endpoint req = {0};
+	struct rpc_vfu_virtio_delete_endpoint_ctx req = {0};
 	int rc;
 
 	if (spdk_json_decode_object(params, rpc_vfu_virtio_delete_endpoint_decoders,
@@ -47,50 +38,33 @@ rpc_vfu_virtio_delete_endpoint(struct spdk_jsonrpc_request *request,
 	if (rc < 0) {
 		goto invalid;
 	}
-	free_rpc_delete_vfu_endpoint(&req);
+	free_rpc_vfu_virtio_delete_endpoint(&req);
 
 	spdk_jsonrpc_send_bool_response(request, true);
 	return;
 
 invalid:
-	free_rpc_delete_vfu_endpoint(&req);
+	free_rpc_vfu_virtio_delete_endpoint(&req);
 	spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS,
 					 spdk_strerror(-rc));
 }
 SPDK_RPC_REGISTER("vfu_virtio_delete_endpoint", rpc_vfu_virtio_delete_endpoint,
 		  SPDK_RPC_RUNTIME)
 
-struct rpc_vfu_virtio_create_blk {
-	char		*name;
-	char		*bdev_name;
-	char		*cpumask;
-	uint16_t	num_queues;
-	uint16_t	qsize;
-	bool		packed_ring;
-};
-
 static const struct spdk_json_object_decoder rpc_vfu_virtio_create_blk_endpoint_decoders[] = {
-	{"name", offsetof(struct rpc_vfu_virtio_create_blk, name), spdk_json_decode_string },
-	{"bdev_name", offsetof(struct rpc_vfu_virtio_create_blk, bdev_name), spdk_json_decode_string },
-	{"cpumask", offsetof(struct rpc_vfu_virtio_create_blk, cpumask), spdk_json_decode_string, true},
-	{"num_queues", offsetof(struct rpc_vfu_virtio_create_blk, num_queues), spdk_json_decode_uint16, true },
-	{"qsize", offsetof(struct rpc_vfu_virtio_create_blk, qsize), spdk_json_decode_uint16, true },
-	{"packed_ring", offsetof(struct rpc_vfu_virtio_create_blk, packed_ring), spdk_json_decode_bool, true},
+	{"name", offsetof(struct rpc_vfu_virtio_create_blk_endpoint_ctx, name), spdk_json_decode_string },
+	{"bdev_name", offsetof(struct rpc_vfu_virtio_create_blk_endpoint_ctx, bdev_name), spdk_json_decode_string },
+	{"cpumask", offsetof(struct rpc_vfu_virtio_create_blk_endpoint_ctx, cpumask), spdk_json_decode_string, true},
+	{"num_queues", offsetof(struct rpc_vfu_virtio_create_blk_endpoint_ctx, num_queues), spdk_json_decode_uint16, true },
+	{"qsize", offsetof(struct rpc_vfu_virtio_create_blk_endpoint_ctx, qsize), spdk_json_decode_uint16, true },
+	{"packed_ring", offsetof(struct rpc_vfu_virtio_create_blk_endpoint_ctx, packed_ring), spdk_json_decode_bool, true},
 };
-
-static void
-free_rpc_vfu_virtio_create_blk(struct rpc_vfu_virtio_create_blk *req)
-{
-	free(req->name);
-	free(req->bdev_name);
-	free(req->cpumask);
-}
 
 static void
 rpc_vfu_virtio_create_blk_endpoint(struct spdk_jsonrpc_request *request,
 				   const struct spdk_json_val *params)
 {
-	struct rpc_vfu_virtio_create_blk req = {0};
+	struct rpc_vfu_virtio_create_blk_endpoint_ctx req = {0};
 	int rc;
 
 	if (spdk_json_decode_object(params, rpc_vfu_virtio_create_blk_endpoint_decoders,
@@ -113,43 +87,30 @@ rpc_vfu_virtio_create_blk_endpoint(struct spdk_jsonrpc_request *request,
 		spdk_vfu_delete_endpoint(req.name);
 		goto invalid;
 	}
-	free_rpc_vfu_virtio_create_blk(&req);
+	free_rpc_vfu_virtio_create_blk_endpoint(&req);
 
 	spdk_jsonrpc_send_bool_response(request, true);
 	return;
 
 invalid:
-	free_rpc_vfu_virtio_create_blk(&req);
+	free_rpc_vfu_virtio_create_blk_endpoint(&req);
 	spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS,
 					 spdk_strerror(-rc));
 }
 SPDK_RPC_REGISTER("vfu_virtio_create_blk_endpoint", rpc_vfu_virtio_create_blk_endpoint,
 		  SPDK_RPC_RUNTIME)
 
-struct rpc_vfu_virtio_scsi {
-	char		*name;
-	uint8_t		scsi_target_num;
-	char		*bdev_name;
-};
-
 static const struct spdk_json_object_decoder rpc_vfu_virtio_scsi_add_target_decoders[] = {
-	{"name", offsetof(struct rpc_vfu_virtio_scsi, name), spdk_json_decode_string },
-	{"scsi_target_num", offsetof(struct rpc_vfu_virtio_scsi, scsi_target_num), spdk_json_decode_uint8 },
-	{"bdev_name", offsetof(struct rpc_vfu_virtio_scsi, bdev_name), spdk_json_decode_string },
+	{"name", offsetof(struct rpc_vfu_virtio_scsi_add_target_ctx, name), spdk_json_decode_string },
+	{"scsi_target_num", offsetof(struct rpc_vfu_virtio_scsi_add_target_ctx, scsi_target_num), spdk_json_decode_uint8 },
+	{"bdev_name", offsetof(struct rpc_vfu_virtio_scsi_add_target_ctx, bdev_name), spdk_json_decode_string },
 };
-
-static void
-free_rpc_vfu_virtio_scsi(struct rpc_vfu_virtio_scsi *req)
-{
-	free(req->name);
-	free(req->bdev_name);
-}
 
 static void
 rpc_vfu_virtio_scsi_add_target(struct spdk_jsonrpc_request *request,
 			       const struct spdk_json_val *params)
 {
-	struct rpc_vfu_virtio_scsi req = {0};
+	struct rpc_vfu_virtio_scsi_add_target_ctx req = {0};
 	int rc;
 
 	if (spdk_json_decode_object(params, rpc_vfu_virtio_scsi_add_target_decoders,
@@ -165,39 +126,28 @@ rpc_vfu_virtio_scsi_add_target(struct spdk_jsonrpc_request *request,
 		goto invalid;
 	}
 
-	free_rpc_vfu_virtio_scsi(&req);
+	free_rpc_vfu_virtio_scsi_add_target(&req);
 	spdk_jsonrpc_send_bool_response(request, true);
 	return;
 
 invalid:
-	free_rpc_vfu_virtio_scsi(&req);
+	free_rpc_vfu_virtio_scsi_add_target(&req);
 	spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS,
 					 spdk_strerror(-rc));
 }
 SPDK_RPC_REGISTER("vfu_virtio_scsi_add_target", rpc_vfu_virtio_scsi_add_target,
 		  SPDK_RPC_RUNTIME)
 
-struct rpc_vfu_virtio_scsi_remove {
-	char		*name;
-	uint8_t		scsi_target_num;
-};
-
 static const struct spdk_json_object_decoder rpc_vfu_virtio_scsi_remove_target_decoders[] = {
-	{"name", offsetof(struct rpc_vfu_virtio_scsi_remove, name), spdk_json_decode_string },
-	{"scsi_target_num", offsetof(struct rpc_vfu_virtio_scsi_remove, scsi_target_num), spdk_json_decode_uint8 },
+	{"name", offsetof(struct rpc_vfu_virtio_scsi_remove_target_ctx, name), spdk_json_decode_string },
+	{"scsi_target_num", offsetof(struct rpc_vfu_virtio_scsi_remove_target_ctx, scsi_target_num), spdk_json_decode_uint8 },
 };
-
-static void
-free_rpc_vfu_virtio_scsi_remove(struct rpc_vfu_virtio_scsi_remove *req)
-{
-	free(req->name);
-}
 
 static void
 rpc_vfu_virtio_scsi_remove_target(struct spdk_jsonrpc_request *request,
 				  const struct spdk_json_val *params)
 {
-	struct rpc_vfu_virtio_scsi_remove req = {0};
+	struct rpc_vfu_virtio_scsi_remove_target_ctx req = {0};
 	int rc;
 
 	if (spdk_json_decode_object(params, rpc_vfu_virtio_scsi_remove_target_decoders,
@@ -213,46 +163,31 @@ rpc_vfu_virtio_scsi_remove_target(struct spdk_jsonrpc_request *request,
 		goto invalid;
 	}
 
-	free_rpc_vfu_virtio_scsi_remove(&req);
+	free_rpc_vfu_virtio_scsi_remove_target(&req);
 	spdk_jsonrpc_send_bool_response(request, true);
 	return;
 
 invalid:
-	free_rpc_vfu_virtio_scsi_remove(&req);
+	free_rpc_vfu_virtio_scsi_remove_target(&req);
 	spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS,
 					 spdk_strerror(-rc));
 }
 SPDK_RPC_REGISTER("vfu_virtio_scsi_remove_target", rpc_vfu_virtio_scsi_remove_target,
 		  SPDK_RPC_RUNTIME)
 
-struct rpc_vfu_virtio_create_scsi {
-	char		*name;
-	char		*cpumask;
-	uint16_t	num_io_queues;
-	uint16_t	qsize;
-	bool		packed_ring;
-};
-
 static const struct spdk_json_object_decoder rpc_vfu_virtio_create_scsi_endpoint_decoders[] = {
-	{"name", offsetof(struct rpc_vfu_virtio_create_scsi, name), spdk_json_decode_string },
-	{"cpumask", offsetof(struct rpc_vfu_virtio_create_scsi, cpumask), spdk_json_decode_string, true},
-	{"num_io_queues", offsetof(struct rpc_vfu_virtio_create_scsi, num_io_queues), spdk_json_decode_uint16, true },
-	{"qsize", offsetof(struct rpc_vfu_virtio_create_scsi, qsize), spdk_json_decode_uint16, true },
-	{"packed_ring", offsetof(struct rpc_vfu_virtio_create_scsi, packed_ring), spdk_json_decode_bool, true},
+	{"name", offsetof(struct rpc_vfu_virtio_create_scsi_endpoint_ctx, name), spdk_json_decode_string },
+	{"cpumask", offsetof(struct rpc_vfu_virtio_create_scsi_endpoint_ctx, cpumask), spdk_json_decode_string, true},
+	{"num_io_queues", offsetof(struct rpc_vfu_virtio_create_scsi_endpoint_ctx, num_io_queues), spdk_json_decode_uint16, true },
+	{"qsize", offsetof(struct rpc_vfu_virtio_create_scsi_endpoint_ctx, qsize), spdk_json_decode_uint16, true },
+	{"packed_ring", offsetof(struct rpc_vfu_virtio_create_scsi_endpoint_ctx, packed_ring), spdk_json_decode_bool, true},
 };
-
-static void
-free_rpc_vfu_virtio_create_scsi(struct rpc_vfu_virtio_create_scsi *req)
-{
-	free(req->name);
-	free(req->cpumask);
-}
 
 static void
 rpc_vfu_virtio_create_scsi_endpoint(struct spdk_jsonrpc_request *request,
 				    const struct spdk_json_val *params)
 {
-	struct rpc_vfu_virtio_create_scsi req = {0};
+	struct rpc_vfu_virtio_create_scsi_endpoint_ctx req = {0};
 	int rc;
 
 	if (spdk_json_decode_object(params, rpc_vfu_virtio_create_scsi_endpoint_decoders,
@@ -274,13 +209,13 @@ rpc_vfu_virtio_create_scsi_endpoint(struct spdk_jsonrpc_request *request,
 		spdk_vfu_delete_endpoint(req.name);
 		goto invalid;
 	}
-	free_rpc_vfu_virtio_create_scsi(&req);
+	free_rpc_vfu_virtio_create_scsi_endpoint(&req);
 
 	spdk_jsonrpc_send_bool_response(request, true);
 	return;
 
 invalid:
-	free_rpc_vfu_virtio_create_scsi(&req);
+	free_rpc_vfu_virtio_create_scsi_endpoint(&req);
 	spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS,
 					 spdk_strerror(-rc));
 }
@@ -288,6 +223,8 @@ SPDK_RPC_REGISTER("vfu_virtio_create_scsi_endpoint", rpc_vfu_virtio_create_scsi_
 		  SPDK_RPC_RUNTIME)
 
 #ifdef SPDK_CONFIG_FSDEV
+
+/* TODO: replace with rpc_vfu_virtio_create_fs_endpoint_ctx */
 struct rpc_vfu_virtio_create_fs {
 	char		*name;
 	char		*fsdev_name;
@@ -309,6 +246,7 @@ static const struct spdk_json_object_decoder rpc_vfu_virtio_create_fs_endpoint_d
 	{"packed_ring", offsetof(struct rpc_vfu_virtio_create_fs, packed_ring), spdk_json_decode_bool, true},
 };
 
+/* TODO: replace with free_rpc_vfu_virtio_create_fs_endpoint */
 static void
 free_rpc_vfu_virtio_create_fs(struct rpc_vfu_virtio_create_fs *req)
 {

@@ -9,6 +9,7 @@
 #include "spdk/rpc.h"
 #include "spdk/util.h"
 #include "spdk/cpuset.h"
+#include "spdk_internal/rpc_autogen.h"
 
 static const struct spdk_json_object_decoder rpc_nvmf_set_max_subsystems_decoders[] = {
 	{"max_subsystems", 0, spdk_json_decode_uint32}
@@ -266,23 +267,17 @@ rpc_nvmf_set_config(struct spdk_jsonrpc_request *request,
 }
 SPDK_RPC_REGISTER("nvmf_set_config", rpc_nvmf_set_config, SPDK_RPC_STARTUP)
 
-struct nvmf_rpc_set_crdt {
-	uint16_t crdt1;
-	uint16_t crdt2;
-	uint16_t crdt3;
-};
-
 static const struct spdk_json_object_decoder rpc_nvmf_set_crdt_decoders[] = {
-	{"crdt1", offsetof(struct nvmf_rpc_set_crdt, crdt1), spdk_json_decode_uint16, true},
-	{"crdt2", offsetof(struct nvmf_rpc_set_crdt, crdt2), spdk_json_decode_uint16, true},
-	{"crdt3", offsetof(struct nvmf_rpc_set_crdt, crdt3), spdk_json_decode_uint16, true},
+	{"crdt1", offsetof(struct rpc_nvmf_set_crdt_ctx, crdt1), spdk_json_decode_uint16, true},
+	{"crdt2", offsetof(struct rpc_nvmf_set_crdt_ctx, crdt2), spdk_json_decode_uint16, true},
+	{"crdt3", offsetof(struct rpc_nvmf_set_crdt_ctx, crdt3), spdk_json_decode_uint16, true},
 };
 
 static void
 rpc_nvmf_set_crdt(struct spdk_jsonrpc_request *request,
 		  const struct spdk_json_val *params)
 {
-	struct nvmf_rpc_set_crdt rpc_set_crdt;
+	struct rpc_nvmf_set_crdt_ctx rpc_set_crdt;
 
 	rpc_set_crdt.crdt1 = 0;
 	rpc_set_crdt.crdt2 = 0;

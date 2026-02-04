@@ -8,11 +8,12 @@
 #include "vbdev_crypto.h"
 
 #include "spdk/hexlify.h"
+#include "spdk_internal/rpc_autogen.h"
 
 /* Reasonable bdev name length + cipher's name len */
 #define MAX_KEY_NAME_LEN 128
 
-/* Structure to hold the parameters for this RPC method. */
+/* TODO: replace with rpc_bdev_crypto_create_ctx */
 struct rpc_construct_crypto {
 	char *base_bdev_name;
 	char *name;
@@ -20,7 +21,7 @@ struct rpc_construct_crypto {
 	struct spdk_accel_crypto_key_create_param param;
 };
 
-/* Free the allocated memory resource after the RPC handling. */
+/* TODO: replace with free_rpc_bdev_crypto_create */
 static void
 free_rpc_construct_crypto(struct rpc_construct_crypto *r)
 {
@@ -192,18 +193,8 @@ cleanup:
 }
 SPDK_RPC_REGISTER("bdev_crypto_create", rpc_bdev_crypto_create, SPDK_RPC_RUNTIME)
 
-struct rpc_delete_crypto {
-	char *name;
-};
-
-static void
-free_rpc_delete_crypto(struct rpc_delete_crypto *req)
-{
-	free(req->name);
-}
-
 static const struct spdk_json_object_decoder rpc_bdev_crypto_delete_decoders[] = {
-	{"name", offsetof(struct rpc_delete_crypto, name), spdk_json_decode_string},
+	{"name", offsetof(struct rpc_bdev_crypto_delete_ctx, name), spdk_json_decode_string},
 };
 
 static void
@@ -222,7 +213,7 @@ static void
 rpc_bdev_crypto_delete(struct spdk_jsonrpc_request *request,
 		       const struct spdk_json_val *params)
 {
-	struct rpc_delete_crypto req = {NULL};
+	struct rpc_bdev_crypto_delete_ctx req = {NULL};
 
 	if (spdk_json_decode_object(params, rpc_bdev_crypto_delete_decoders,
 				    SPDK_COUNTOF(rpc_bdev_crypto_delete_decoders),
@@ -234,11 +225,11 @@ rpc_bdev_crypto_delete(struct spdk_jsonrpc_request *request,
 
 	delete_crypto_disk(req.name, rpc_bdev_crypto_delete_cb, request);
 
-	free_rpc_delete_crypto(&req);
+	free_rpc_bdev_crypto_delete(&req);
 
 	return;
 
 cleanup:
-	free_rpc_delete_crypto(&req);
+	free_rpc_bdev_crypto_delete(&req);
 }
 SPDK_RPC_REGISTER("bdev_crypto_delete", rpc_bdev_crypto_delete, SPDK_RPC_RUNTIME)

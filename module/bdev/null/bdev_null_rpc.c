@@ -8,9 +8,11 @@
 #include "spdk/string.h"
 #include "spdk/bdev_module.h"
 #include "spdk/log.h"
+#include "spdk_internal/rpc_autogen.h"
 
 #include "bdev_null.h"
 
+/* TODO: replace with free_rpc_bdev_null_create */
 static void
 free_rpc_construct_null(struct null_bdev_opts *req)
 {
@@ -69,18 +71,8 @@ cleanup:
 }
 SPDK_RPC_REGISTER("bdev_null_create", rpc_bdev_null_create, SPDK_RPC_RUNTIME)
 
-struct rpc_delete_null {
-	char *name;
-};
-
-static void
-free_rpc_delete_null(struct rpc_delete_null *req)
-{
-	free(req->name);
-}
-
 static const struct spdk_json_object_decoder rpc_bdev_null_delete_decoders[] = {
-	{"name", offsetof(struct rpc_delete_null, name), spdk_json_decode_string},
+	{"name", offsetof(struct rpc_bdev_null_delete_ctx, name), spdk_json_decode_string},
 };
 
 static void
@@ -99,7 +91,7 @@ static void
 rpc_bdev_null_delete(struct spdk_jsonrpc_request *request,
 		     const struct spdk_json_val *params)
 {
-	struct rpc_delete_null req = {NULL};
+	struct rpc_bdev_null_delete_ctx req = {NULL};
 
 	if (spdk_json_decode_object(params, rpc_bdev_null_delete_decoders,
 				    SPDK_COUNTOF(rpc_bdev_null_delete_decoders),
@@ -111,36 +103,25 @@ rpc_bdev_null_delete(struct spdk_jsonrpc_request *request,
 
 	bdev_null_delete(req.name, rpc_bdev_null_delete_cb, request);
 
-	free_rpc_delete_null(&req);
+	free_rpc_bdev_null_delete(&req);
 
 	return;
 
 cleanup:
-	free_rpc_delete_null(&req);
+	free_rpc_bdev_null_delete(&req);
 }
 SPDK_RPC_REGISTER("bdev_null_delete", rpc_bdev_null_delete, SPDK_RPC_RUNTIME)
 
-struct rpc_bdev_null_resize {
-	char *name;
-	uint64_t new_size;
-};
-
 static const struct spdk_json_object_decoder rpc_bdev_null_resize_decoders[] = {
-	{"name", offsetof(struct rpc_bdev_null_resize, name), spdk_json_decode_string},
-	{"new_size", offsetof(struct rpc_bdev_null_resize, new_size), spdk_json_decode_uint64}
+	{"name", offsetof(struct rpc_bdev_null_resize_ctx, name), spdk_json_decode_string},
+	{"new_size", offsetof(struct rpc_bdev_null_resize_ctx, new_size), spdk_json_decode_uint64}
 };
-
-static void
-free_rpc_bdev_null_resize(struct rpc_bdev_null_resize *req)
-{
-	free(req->name);
-}
 
 static void
 rpc_bdev_null_resize(struct spdk_jsonrpc_request *request,
 		     const struct spdk_json_val *params)
 {
-	struct rpc_bdev_null_resize req = {};
+	struct rpc_bdev_null_resize_ctx req = {};
 	int rc;
 
 	if (spdk_json_decode_object(params, rpc_bdev_null_resize_decoders,

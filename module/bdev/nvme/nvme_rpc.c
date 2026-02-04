@@ -18,6 +18,7 @@ enum spdk_nvme_rpc_type {
 	NVME_IO_CMD,
 };
 
+/* TODO: replace with rpc_bdev_nvme_send_cmd_ctx */
 struct rpc_bdev_nvme_send_cmd_req {
 	char			*name;
 	int			cmd_type;
@@ -45,6 +46,7 @@ struct rpc_bdev_nvme_send_cmd_ctx {
 	struct spdk_io_channel		*ctrlr_io_ch;
 };
 
+/* TODO: replace with free_rpc_bdev_nvme_send_cmd */
 static void
 free_rpc_bdev_nvme_send_cmd_ctx(struct rpc_bdev_nvme_send_cmd_ctx *ctx)
 {

@@ -9,6 +9,7 @@
 #include "spdk/util.h"
 #include "spdk/log.h"
 #include "vbdev_error.h"
+#include "spdk_internal/rpc_autogen.h"
 
 static int
 rpc_error_bdev_decode_io_type(const struct spdk_json_val *val, void *out)
@@ -56,27 +57,16 @@ rpc_error_bdev_decode_error_type(const struct spdk_json_val *val, void *out)
 	return 0;
 }
 
-struct rpc_bdev_error_create {
-	char *base_name;
-	struct spdk_uuid uuid;
-};
-
-static void
-free_rpc_bdev_error_create(struct rpc_bdev_error_create *req)
-{
-	free(req->base_name);
-}
-
 static const struct spdk_json_object_decoder rpc_bdev_error_create_decoders[] = {
-	{"base_name", offsetof(struct rpc_bdev_error_create, base_name), spdk_json_decode_string},
-	{"uuid", offsetof(struct rpc_bdev_error_create, uuid), spdk_json_decode_uuid, true},
+	{"base_name", offsetof(struct rpc_bdev_error_create_ctx, base_name), spdk_json_decode_string},
+	{"uuid", offsetof(struct rpc_bdev_error_create_ctx, uuid), spdk_json_decode_uuid, true},
 };
 
 static void
 rpc_bdev_error_create(struct spdk_jsonrpc_request *request,
 		      const struct spdk_json_val *params)
 {
-	struct rpc_bdev_error_create req = {};
+	struct rpc_bdev_error_create_ctx req = {};
 	int rc = 0;
 
 	if (spdk_json_decode_object(params, rpc_bdev_error_create_decoders,
@@ -101,18 +91,8 @@ cleanup:
 }
 SPDK_RPC_REGISTER("bdev_error_create", rpc_bdev_error_create, SPDK_RPC_RUNTIME)
 
-struct rpc_delete_error {
-	char *name;
-};
-
-static void
-free_rpc_delete_error(struct rpc_delete_error *r)
-{
-	free(r->name);
-}
-
 static const struct spdk_json_object_decoder rpc_bdev_error_delete_decoders[] = {
-	{"name", offsetof(struct rpc_delete_error, name), spdk_json_decode_string},
+	{"name", offsetof(struct rpc_bdev_error_delete_ctx, name), spdk_json_decode_string},
 };
 
 static void
@@ -131,7 +111,7 @@ static void
 rpc_bdev_error_delete(struct spdk_jsonrpc_request *request,
 		      const struct spdk_json_val *params)
 {
-	struct rpc_delete_error req = {NULL};
+	struct rpc_bdev_error_delete_ctx req = {NULL};
 
 	if (spdk_json_decode_object(params, rpc_bdev_error_delete_decoders,
 				    SPDK_COUNTOF(rpc_bdev_error_delete_decoders),
@@ -144,10 +124,11 @@ rpc_bdev_error_delete(struct spdk_jsonrpc_request *request,
 	vbdev_error_delete(req.name, rpc_bdev_error_delete_cb, request);
 
 cleanup:
-	free_rpc_delete_error(&req);
+	free_rpc_bdev_error_delete(&req);
 }
 SPDK_RPC_REGISTER("bdev_error_delete", rpc_bdev_error_delete, SPDK_RPC_RUNTIME)
 
+/* TODO: replace with rpc_bdev_error_inject_error_ctx */
 struct rpc_error_information {
 	char *name;
 	struct vbdev_error_inject_opts opts;
@@ -163,6 +144,7 @@ static const struct spdk_json_object_decoder rpc_bdev_error_inject_error_decoder
 	{"corrupt_value", offsetof(struct rpc_error_information, opts.corrupt_value), spdk_json_decode_uint8, true},
 };
 
+/* TODO: replace with free_rpc_bdev_error_inject_error */
 static void
 free_rpc_error_information(struct rpc_error_information *p)
 {

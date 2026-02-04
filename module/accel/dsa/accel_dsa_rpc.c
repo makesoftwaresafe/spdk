@@ -11,20 +11,17 @@
 #include "spdk/stdinc.h"
 #include "spdk/env.h"
 #include "spdk/string.h"
-
-struct rpc_dsa_scan_accel_module {
-	bool config_kernel_mode;
-};
+#include "spdk_internal/rpc_autogen.h"
 
 static const struct spdk_json_object_decoder rpc_dsa_scan_accel_module_decoders[] = {
-	{"config_kernel_mode", offsetof(struct rpc_dsa_scan_accel_module, config_kernel_mode), spdk_json_decode_bool, true},
+	{"config_kernel_mode", offsetof(struct rpc_dsa_scan_accel_module_ctx, config_kernel_mode), spdk_json_decode_bool, true},
 };
 
 static void
 rpc_dsa_scan_accel_module(struct spdk_jsonrpc_request *request,
 			  const struct spdk_json_val *params)
 {
-	struct rpc_dsa_scan_accel_module req = {};
+	struct rpc_dsa_scan_accel_module_ctx req = {};
 	int rc;
 
 	if (params != NULL) {

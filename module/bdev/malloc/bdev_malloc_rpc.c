@@ -8,7 +8,9 @@
 #include "spdk/rpc.h"
 #include "spdk/string.h"
 #include "spdk/log.h"
+#include "spdk_internal/rpc_autogen.h"
 
+/* TODO: replace with free_rpc_bdev_malloc_create */
 static void
 free_rpc_construct_malloc(struct malloc_bdev_opts *r)
 {
@@ -68,18 +70,8 @@ cleanup:
 }
 SPDK_RPC_REGISTER("bdev_malloc_create", rpc_bdev_malloc_create, SPDK_RPC_RUNTIME)
 
-struct rpc_delete_malloc {
-	char *name;
-};
-
-static void
-free_rpc_delete_malloc(struct rpc_delete_malloc *r)
-{
-	free(r->name);
-}
-
 static const struct spdk_json_object_decoder rpc_bdev_malloc_delete_decoders[] = {
-	{"name", offsetof(struct rpc_delete_malloc, name), spdk_json_decode_string},
+	{"name", offsetof(struct rpc_bdev_malloc_delete_ctx, name), spdk_json_decode_string},
 };
 
 static void
@@ -98,7 +90,7 @@ static void
 rpc_bdev_malloc_delete(struct spdk_jsonrpc_request *request,
 		       const struct spdk_json_val *params)
 {
-	struct rpc_delete_malloc req = {NULL};
+	struct rpc_bdev_malloc_delete_ctx req = {NULL};
 
 	if (spdk_json_decode_object(params, rpc_bdev_malloc_delete_decoders,
 				    SPDK_COUNTOF(rpc_bdev_malloc_delete_decoders),
@@ -112,6 +104,6 @@ rpc_bdev_malloc_delete(struct spdk_jsonrpc_request *request,
 	delete_malloc_disk(req.name, rpc_bdev_malloc_delete_cb, request);
 
 cleanup:
-	free_rpc_delete_malloc(&req);
+	free_rpc_bdev_malloc_delete(&req);
 }
 SPDK_RPC_REGISTER("bdev_malloc_delete", rpc_bdev_malloc_delete, SPDK_RPC_RUNTIME)

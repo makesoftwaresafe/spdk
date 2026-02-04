@@ -10,27 +10,23 @@
 #include "spdk/util.h"
 #include "spdk/log.h"
 #include "spdk/thread.h"
+#include "spdk_internal/rpc_autogen.h"
 
 #include "bdev_virtio.h"
 
 #define SPDK_VIRTIO_USER_DEFAULT_VQ_COUNT		1
 #define SPDK_VIRTIO_USER_DEFAULT_QUEUE_SIZE		512
 
-struct rpc_bdev_virtio_blk_hotplug {
-	bool enabled;
-	uint64_t period_us;
-};
-
 static const struct spdk_json_object_decoder rpc_bdev_virtio_blk_set_hotplug_decoders[] = {
-	{"enable", offsetof(struct rpc_bdev_virtio_blk_hotplug, enabled), spdk_json_decode_bool, false},
-	{"period_us", offsetof(struct rpc_bdev_virtio_blk_hotplug, period_us), spdk_json_decode_uint64, true},
+	{"enable", offsetof(struct rpc_bdev_virtio_blk_set_hotplug_ctx, enable), spdk_json_decode_bool, false},
+	{"period_us", offsetof(struct rpc_bdev_virtio_blk_set_hotplug_ctx, period_us), spdk_json_decode_uint64, true},
 };
 
 static void
 rpc_bdev_virtio_blk_set_hotplug(struct spdk_jsonrpc_request *request,
 				const struct spdk_json_val *params)
 {
-	struct rpc_bdev_virtio_blk_hotplug req = {false, 0};
+	struct rpc_bdev_virtio_blk_set_hotplug_ctx req = {false, 0};
 	int rc;
 
 	if (spdk_json_decode_object(params, rpc_bdev_virtio_blk_set_hotplug_decoders,
@@ -40,7 +36,7 @@ rpc_bdev_virtio_blk_set_hotplug(struct spdk_jsonrpc_request *request,
 		goto invalid;
 	}
 
-	rc = bdev_virtio_pci_blk_set_hotplug(req.enabled, req.period_us);
+	rc = bdev_virtio_pci_blk_set_hotplug(req.enable, req.period_us);
 	if (rc) {
 		goto invalid;
 	}
@@ -52,12 +48,8 @@ invalid:
 }
 SPDK_RPC_REGISTER("bdev_virtio_blk_set_hotplug", rpc_bdev_virtio_blk_set_hotplug, SPDK_RPC_RUNTIME)
 
-struct rpc_remove_virtio_dev {
-	char *name;
-};
-
 static const struct spdk_json_object_decoder rpc_bdev_virtio_detach_controller_decoders[] = {
-	{"name", offsetof(struct rpc_remove_virtio_dev, name), spdk_json_decode_string },
+	{"name", offsetof(struct rpc_bdev_virtio_detach_controller_ctx, name), spdk_json_decode_string },
 };
 
 static void
@@ -78,7 +70,7 @@ static void
 rpc_bdev_virtio_detach_controller(struct spdk_jsonrpc_request *request,
 				  const struct spdk_json_val *params)
 {
-	struct rpc_remove_virtio_dev req = {NULL};
+	struct rpc_bdev_virtio_detach_controller_ctx req = {NULL};
 	int rc = 0;
 
 	if (spdk_json_decode_object(params, rpc_bdev_virtio_detach_controller_decoders,
@@ -99,7 +91,7 @@ rpc_bdev_virtio_detach_controller(struct spdk_jsonrpc_request *request,
 	}
 
 cleanup:
-	free(req.name);
+	free_rpc_bdev_virtio_detach_controller(&req);
 }
 SPDK_RPC_REGISTER("bdev_virtio_detach_controller",
 		  rpc_bdev_virtio_detach_controller, SPDK_RPC_RUNTIME)
@@ -123,7 +115,8 @@ rpc_bdev_virtio_scsi_get_devices(struct spdk_jsonrpc_request *request,
 SPDK_RPC_REGISTER("bdev_virtio_scsi_get_devices",
 		  rpc_bdev_virtio_scsi_get_devices, SPDK_RPC_RUNTIME)
 
-struct rpc_bdev_virtio_attach_controller_ctx {
+/* TODO: replace with rpc_bdev_virtio_attach_controller_ctx */
+struct rpc_bdev_virtio_attach_controller {
 	char *name;
 	char *trtype;
 	char *traddr;
@@ -134,16 +127,17 @@ struct rpc_bdev_virtio_attach_controller_ctx {
 };
 
 static const struct spdk_json_object_decoder rpc_bdev_virtio_attach_controller_decoders[] = {
-	{"name", offsetof(struct rpc_bdev_virtio_attach_controller_ctx, name), spdk_json_decode_string },
-	{"trtype", offsetof(struct rpc_bdev_virtio_attach_controller_ctx, trtype), spdk_json_decode_string },
-	{"traddr", offsetof(struct rpc_bdev_virtio_attach_controller_ctx, traddr), spdk_json_decode_string },
-	{"dev_type", offsetof(struct rpc_bdev_virtio_attach_controller_ctx, dev_type), spdk_json_decode_string },
-	{"vq_count", offsetof(struct rpc_bdev_virtio_attach_controller_ctx, vq_count), spdk_json_decode_uint32, true },
-	{"vq_size", offsetof(struct rpc_bdev_virtio_attach_controller_ctx, vq_size), spdk_json_decode_uint32, true },
+	{"name", offsetof(struct rpc_bdev_virtio_attach_controller, name), spdk_json_decode_string },
+	{"trtype", offsetof(struct rpc_bdev_virtio_attach_controller, trtype), spdk_json_decode_string },
+	{"traddr", offsetof(struct rpc_bdev_virtio_attach_controller, traddr), spdk_json_decode_string },
+	{"dev_type", offsetof(struct rpc_bdev_virtio_attach_controller, dev_type), spdk_json_decode_string },
+	{"vq_count", offsetof(struct rpc_bdev_virtio_attach_controller, vq_count), spdk_json_decode_uint32, true },
+	{"vq_size", offsetof(struct rpc_bdev_virtio_attach_controller, vq_size), spdk_json_decode_uint32, true },
 };
 
+/* TODO: replace with free_rpc_bdev_virtio_attach_controller */
 static void
-free_rpc_bdev_virtio_attach_controller_ctx(struct rpc_bdev_virtio_attach_controller_ctx *req)
+free_rpc_bdev_virtio_attach_controller_ctx(struct rpc_bdev_virtio_attach_controller *req)
 {
 	free(req->name);
 	free(req->trtype);
@@ -155,7 +149,7 @@ free_rpc_bdev_virtio_attach_controller_ctx(struct rpc_bdev_virtio_attach_control
 static void
 rpc_create_virtio_dev_cb(void *ctx, int result, struct spdk_bdev **bdevs, size_t cnt)
 {
-	struct rpc_bdev_virtio_attach_controller_ctx *req = ctx;
+	struct rpc_bdev_virtio_attach_controller *req = ctx;
 	struct spdk_json_write_ctx *w;
 	size_t i;
 
@@ -183,7 +177,7 @@ static void
 rpc_bdev_virtio_attach_controller(struct spdk_jsonrpc_request *request,
 				  const struct spdk_json_val *params)
 {
-	struct rpc_bdev_virtio_attach_controller_ctx *req;
+	struct rpc_bdev_virtio_attach_controller *req;
 	struct spdk_bdev *bdev = NULL;
 	struct spdk_pci_addr pci_addr;
 	int rc = 0;

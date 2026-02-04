@@ -8,13 +8,16 @@
 #include "spdk/rpc.h"
 #include "spdk/util.h"
 #include "fsdev_aio.h"
+#include "spdk_internal/rpc_autogen.h"
 
+/* TODO: replace with rpc_fsdev_aio_create_ctx */
 struct rpc_aio_create {
 	char *name;
 	char *root_path;
 	struct spdk_fsdev_aio_opts opts;
 };
 
+/* TODO: replace with free_rpc_fsdev_aio_create */
 static void
 free_rpc_aio_create(struct rpc_aio_create *req)
 {
@@ -69,12 +72,8 @@ rpc_fsdev_aio_create(struct spdk_jsonrpc_request *request, const struct spdk_jso
 }
 SPDK_RPC_REGISTER("fsdev_aio_create", rpc_fsdev_aio_create, SPDK_RPC_RUNTIME)
 
-struct rpc_aio_delete {
-	char *name;
-};
-
 static const struct spdk_json_object_decoder rpc_fsdev_aio_delete_decoders[] = {
-	{"name", offsetof(struct rpc_aio_delete, name), spdk_json_decode_string},
+	{"name", offsetof(struct rpc_fsdev_aio_delete_ctx, name), spdk_json_decode_string},
 };
 
 static void
@@ -92,7 +91,7 @@ rpc_aio_delete_cb(void *cb_arg, int fsdeverrno)
 static void
 rpc_fsdev_aio_delete(struct spdk_jsonrpc_request *request, const struct spdk_json_val *params)
 {
-	struct rpc_aio_delete req = {};
+	struct rpc_fsdev_aio_delete_ctx req = {};
 
 	if (spdk_json_decode_object(params, rpc_fsdev_aio_delete_decoders,
 				    SPDK_COUNTOF(rpc_fsdev_aio_delete_decoders),
@@ -101,11 +100,11 @@ rpc_fsdev_aio_delete(struct spdk_jsonrpc_request *request, const struct spdk_jso
 		spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS,
 						 "spdk_json_decode_object failed");
 
-		free(req.name);
+		free_rpc_fsdev_aio_delete(&req);
 		return;
 	}
 
 	spdk_fsdev_aio_delete(req.name, rpc_aio_delete_cb, request);
-	free(req.name);
+	free_rpc_fsdev_aio_delete(&req);
 }
 SPDK_RPC_REGISTER("fsdev_aio_delete", rpc_fsdev_aio_delete, SPDK_RPC_RUNTIME)
