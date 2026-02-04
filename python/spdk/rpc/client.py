@@ -9,6 +9,8 @@ import logging
 import os
 import socket
 import time
+from abc import ABC, abstractmethod
+from typing import Any, Mapping, Optional
 
 from .cmd_parser import remove_null
 
@@ -29,12 +31,17 @@ def get_addr_type(addr):
     return None
 
 
+class JSONRPCAbstractClient(ABC):
+    @abstractmethod
+    def call(self, method: str, params: Optional[Mapping[str, Any]] = None) -> Any: ...
+
+
 class JSONRPCException(Exception):
     def __init__(self, message):
         self.message = message
 
 
-class JSONRPCDryRunClient:
+class JSONRPCDryRunClient(JSONRPCAbstractClient):
     def __getattr__(self, name):
         return lambda **kwargs: self.call(name, remove_null(kwargs))
 
@@ -42,7 +49,7 @@ class JSONRPCDryRunClient:
         print("Request:\n" + json.dumps({"method": method, "params": params}, indent=2))
 
 
-class JSONRPCClient(object):
+class JSONRPCClient(JSONRPCAbstractClient):
     def __init__(self, addr, port=None, timeout=None, **kwargs):
         self.sock = None
         ch = logging.StreamHandler()
@@ -218,7 +225,7 @@ class JSONRPCClient(object):
         return response['result']
 
 
-class JSONRPCGoClient(object):
+class JSONRPCGoClient(JSONRPCAbstractClient):
     INVALID_PARAMETER_ERROR = 1
     CONNECTION_ERROR = 2
     JSON_RPC_CALL_ERROR = 3
