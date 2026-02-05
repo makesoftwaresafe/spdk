@@ -9176,12 +9176,6 @@ Object of type:
 
 {{ vhost_scsi_luns_controller_params_object }}
 
-##### Vhost NVMe {#rpc_vhost_get_controllers_nvme}
-
-`backend_specific` contains `namespaces` array of following objects:
-
-{{ vhost_nvme_controller_params_object }}
-
 #### Example
 
 Example request:
@@ -9243,24 +9237,6 @@ Example response:
       },
       "iops_threshold": 60000,
       "ctrlr": "VhostScsi0",
-      "delay_base_us": 0
-    },
-    {
-      "cpumask": "0x2",
-      "backend_specific": {
-        "namespaces": [
-          {
-            "bdev": "Malloc3",
-            "nsid": 1
-          },
-          {
-            "bdev": "Malloc4",
-            "nsid": 2
-          }
-        ]
-      },
-      "iops_threshold": 60000,
-      "ctrlr": "VhostNvme0",
       "delay_base_us": 0
     }
   ]

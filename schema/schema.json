@@ -258,21 +258,6 @@
           "description": "Backing bdev name"
         }
       ]
-    },
-    {
-      "name": "vhost_nvme_controller_params",
-      "fields": [
-        {
-          "name": "nsid",
-          "type": "number",
-          "description": "Namespace ID"
-        },
-        {
-          "name": "bdev",
-          "type": "string",
-          "description": "Backing bdev name"
-        }
-      ]
     }
   ],
   "methods": [
