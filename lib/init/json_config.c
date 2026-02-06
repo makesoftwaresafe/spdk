@@ -154,6 +154,22 @@ json_write_stdout(void *cb_ctx, const void *data, size_t size)
 	return rc == size ? 0 : -1;
 }
 
+static void
+log_rpc_error(struct spdk_json_val *error, const char *prefix)
+{
+	struct json_write_buf buf = {};
+	struct spdk_json_write_ctx *w;
+
+	w = spdk_json_write_begin(json_write_stdout, &buf, SPDK_JSON_PARSE_FLAG_DECODE_IN_PLACE);
+	if (w == NULL) {
+		SPDK_ERRLOG("%s: (?)\n", prefix);
+	} else {
+		spdk_json_write_val(w, error);
+		spdk_json_write_end(w);
+		SPDK_ERRLOG("%s:\n%s\n", prefix, buf.data);
+	}
+}
+
 static int
 rpc_client_poller(void *arg)
 {
@@ -185,17 +201,7 @@ rpc_client_poller(void *arg)
 	assert(resp);
 
 	if (resp->error) {
-		struct json_write_buf buf = {};
-		struct spdk_json_write_ctx *w = spdk_json_write_begin(json_write_stdout,
-						&buf, SPDK_JSON_PARSE_FLAG_DECODE_IN_PLACE);
-
-		if (w == NULL) {
-			SPDK_ERRLOG("error response: (?)\n");
-		} else {
-			spdk_json_write_val(w, resp->error);
-			spdk_json_write_end(w);
-			SPDK_ERRLOG("error response: \n%s\n", buf.data);
-		}
+		log_rpc_error(resp->error, "error response");
 	}
 
 	if (resp->error && ctx->stop_on_error) {
