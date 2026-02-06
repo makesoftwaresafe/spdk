@@ -22,6 +22,22 @@ locks_exist() {
 	lslocks -p "$1" | grep -q "spdk_cpu_lock"
 }
 
+# Wait for locks to appear (e.g. after framework_enable_cpumask_locks or app start).
+# Retries to avoid race with lslocks/proc visibility (see issue #2920).
+wait_for_locks() {
+	local pid=$1
+	local max_retries=10
+	local i
+
+	for ((i = 0; i < max_retries; i++)); do
+		if locks_exist "$pid"; then
+			return 0
+		fi
+		sleep 0.2
+	done
+	return 1
+}
+
 no_locks() {
 	local lock_files=(/var/tmp/spdk_cpu_lock*)
 	if ((${#lock_files[@]} != 0)); then
@@ -46,7 +62,7 @@ default_locks() {
 	spdk_tgt_pid=$!
 	waitforlisten "$spdk_tgt_pid"
 
-	locks_exist "$spdk_tgt_pid"
+	wait_for_locks "$spdk_tgt_pid"
 	killprocess "$spdk_tgt_pid"
 
 	NOT waitforlisten "$spdk_tgt_pid"
@@ -68,7 +84,7 @@ default_locks_via_rpc() {
 
 	rpc_cmd framework_enable_cpumask_locks
 
-	locks_exist "$spdk_tgt_pid"
+	wait_for_locks "$spdk_tgt_pid"
 
 	killprocess "$spdk_tgt_pid"
 }
@@ -84,7 +100,7 @@ non_locking_app_on_locked_coremask() {
 	spdk_tgt_pid2=$!
 	waitforlisten "$spdk_tgt_pid2" "$rpc_sock2"
 
-	locks_exist "$spdk_tgt_pid"
+	wait_for_locks "$spdk_tgt_pid"
 
 	killprocess "$spdk_tgt_pid"
 	killprocess "$spdk_tgt_pid2"
@@ -102,7 +118,7 @@ locking_app_on_unlocked_coremask() {
 	spdk_tgt_pid2=$!
 	waitforlisten "$spdk_tgt_pid2" "$rpc_sock2"
 
-	locks_exist $spdk_tgt_pid2
+	wait_for_locks "$spdk_tgt_pid2"
 
 	killprocess "$spdk_tgt_pid"
 	killprocess "$spdk_tgt_pid2"
@@ -119,7 +135,7 @@ locking_app_on_locked_coremask() {
 	spdk_tgt_pid2=$!
 	NOT waitforlisten "$spdk_tgt_pid2" "$rpc_sock2"
 
-	locks_exist $spdk_tgt_pid
+	wait_for_locks "$spdk_tgt_pid"
 
 	killprocess "$spdk_tgt_pid"
 }
