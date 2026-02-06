@@ -138,7 +138,6 @@
 	# public functions in nvmf_transport.h
 	spdk_nvmf_transport_register;
 	spdk_nvmf_tgt_new_qpair;
-	spdk_nvmf_ctrlr_connect;
 	spdk_nvmf_ctrlr_get_regs;
 	spdk_nvmf_request_free_buffers;
 	spdk_nvmf_request_get_buffers;

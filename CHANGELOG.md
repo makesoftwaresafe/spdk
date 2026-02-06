@@ -2,6 +2,10 @@
 
 ## v26.05: (Upcoming Release)
 
+### nvmf
+
+Deprecated API spdk_nvmf_ctrlr_connect() was removed.
+
 ## v26.01
 
 ### accel_ae4dma

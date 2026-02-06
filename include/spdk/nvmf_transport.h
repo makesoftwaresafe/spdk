@@ -510,8 +510,6 @@ struct spdk_nvmf_transport_ops {
  */
 void spdk_nvmf_transport_register(const struct spdk_nvmf_transport_ops *ops);
 
-int spdk_nvmf_ctrlr_connect(struct spdk_nvmf_request *req);
-
 /**
  * Function to be called for each newly discovered qpair.
  *

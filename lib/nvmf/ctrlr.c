@@ -986,46 +986,6 @@ nvmf_subsystem_pg_from_connect_cmd(struct spdk_nvmf_request *req)
 	return &req->qpair->group->sgroups[subsystem->id];
 }
 
-SPDK_LOG_DEPRECATION_REGISTER(spdk_nvmf_ctrlr_connect, "", "v26.05",
-			      SPDK_LOG_DEPRECATION_EVERY_24H);
-
-int
-spdk_nvmf_ctrlr_connect(struct spdk_nvmf_request *req)
-{
-	struct spdk_nvmf_fabric_connect_rsp *rsp = &req->rsp->connect_rsp;
-	struct spdk_nvmf_subsystem_poll_group *sgroup;
-	struct spdk_nvmf_qpair *qpair = req->qpair;
-	enum spdk_nvmf_request_exec_status status;
-
-	SPDK_LOG_DEPRECATED(spdk_nvmf_ctrlr_connect);
-
-	if (req->iovcnt > 1) {
-		SPDK_ERRLOG("Connect command invalid iovcnt: %d\n", req->iovcnt);
-		rsp->status.sc = SPDK_NVME_SC_INVALID_FIELD;
-		status = SPDK_NVMF_REQUEST_EXEC_STATUS_COMPLETE;
-		goto out;
-	}
-
-	sgroup = nvmf_subsystem_pg_from_connect_cmd(req);
-	if (!sgroup) {
-		SPDK_NVMF_INVALID_CONNECT_DATA(rsp, subnqn);
-		status = SPDK_NVMF_REQUEST_EXEC_STATUS_COMPLETE;
-		goto out;
-	}
-
-	sgroup->mgmt_io_outstanding++;
-	TAILQ_INSERT_TAIL(&qpair->outstanding, req, link);
-
-	status = _nvmf_ctrlr_connect(req);
-
-out:
-	if (status == SPDK_NVMF_REQUEST_EXEC_STATUS_COMPLETE) {
-		_nvmf_request_complete(req);
-	}
-
-	return status;
-}
-
 static int
 nvmf_ctrlr_cmd_connect(struct spdk_nvmf_request *req)
 {
