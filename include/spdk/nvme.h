@@ -1997,6 +1997,15 @@ void spdk_nvme_qpair_enable_stats(struct spdk_nvme_qpair *qpair);
 void spdk_nvme_qpair_disable_stats(struct spdk_nvme_qpair *qpair);
 
 /**
+ * Determine whether qpair is admin qpair.
+ *
+ * \param qpair The NVMe qpair.
+ *
+ * \return true if the qpair is an admin queue, or false otherwise.
+ */
+bool spdk_nvme_qpair_is_admin_queue(struct spdk_nvme_qpair *qpair);
+
+/**
  * Opaque extended event handler options.
  */
 struct spdk_event_handler_opts;

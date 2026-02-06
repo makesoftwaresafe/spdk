@@ -1350,3 +1350,9 @@ spdk_nvme_qpair_disable_stats(struct spdk_nvme_qpair *qpair)
 	assert(qpair != NULL);
 	qpair->collect_stats = 0;
 }
+
+bool
+spdk_nvme_qpair_is_admin_queue(struct spdk_nvme_qpair *qpair)
+{
+	return nvme_qpair_is_admin_queue(qpair);
+}

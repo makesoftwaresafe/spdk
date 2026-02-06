@@ -209,6 +209,7 @@
 	spdk_nvme_qpair_reset_stats;
 	spdk_nvme_qpair_enable_stats;
 	spdk_nvme_qpair_disable_stats;
+	spdk_nvme_qpair_is_admin_queue;
 
 	spdk_nvme_print_command;
 	spdk_nvme_print_completion;
