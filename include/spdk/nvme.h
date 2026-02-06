@@ -2006,6 +2006,15 @@ void spdk_nvme_qpair_disable_stats(struct spdk_nvme_qpair *qpair);
 bool spdk_nvme_qpair_is_admin_queue(struct spdk_nvme_qpair *qpair);
 
 /**
+ * Get queue_depth of given qpair.
+ *
+ * \param qpair The NVMe qpair.
+ *
+ * \return value of queue_depth field.
+ */
+uint16_t spdk_nvme_qpair_get_queue_depth(struct spdk_nvme_qpair *qpair);
+
+/**
  * Opaque extended event handler options.
  */
 struct spdk_event_handler_opts;

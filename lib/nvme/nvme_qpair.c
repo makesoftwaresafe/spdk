@@ -1356,3 +1356,9 @@ spdk_nvme_qpair_is_admin_queue(struct spdk_nvme_qpair *qpair)
 {
 	return nvme_qpair_is_admin_queue(qpair);
 }
+
+uint16_t
+spdk_nvme_qpair_get_queue_depth(struct spdk_nvme_qpair *qpair)
+{
+	return qpair->queue_depth;
+}
