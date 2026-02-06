@@ -1199,6 +1199,55 @@ spdk_accel_append_copy(struct spdk_accel_sequence **pseq, struct spdk_io_channel
 }
 
 int
+spdk_accel_append_compare(struct spdk_accel_sequence **pseq, struct spdk_io_channel *ch,
+			  struct iovec *src1_iovs, uint32_t src1_iovcnt,
+			  struct spdk_memory_domain *src1_domain, void *src1_domain_ctx,
+			  struct iovec *src2_iovs, uint32_t src2_iovcnt,
+			  struct spdk_memory_domain *src2_domain, void *src2_domain_ctx,
+			  spdk_accel_step_cb cb_fn, void *cb_arg)
+{
+	struct accel_io_channel *accel_ch = spdk_io_channel_get_ctx(ch);
+	struct spdk_accel_task *task;
+	struct spdk_accel_sequence *seq = *pseq;
+
+	if (src2_domain != NULL || src2_domain_ctx != NULL) {
+		return -EINVAL;
+	}
+
+	if (seq == NULL) {
+		seq = accel_sequence_get(accel_ch);
+		if (spdk_unlikely(seq == NULL)) {
+			return -ENOMEM;
+		}
+	}
+
+	assert(seq->ch == accel_ch);
+	task = accel_sequence_get_task(accel_ch, seq, cb_fn, cb_arg);
+	if (spdk_unlikely(task == NULL)) {
+		if (*pseq == NULL) {
+			accel_sequence_put(seq);
+		}
+		return -ENOMEM;
+	}
+
+	task->src_domain = src1_domain;
+	task->src_domain_ctx = src1_domain_ctx;
+	task->s.iovs = src1_iovs;
+	task->s.iovcnt = src1_iovcnt;
+	task->dst_domain = NULL;
+	task->dst_domain_ctx = NULL;
+	task->s2.iovs = src2_iovs;
+	task->s2.iovcnt = src2_iovcnt;
+	task->nbytes = accel_get_iovlen(src1_iovs, src1_iovcnt);
+	task->op_code = SPDK_ACCEL_OPC_COMPARE;
+
+	TAILQ_INSERT_TAIL(&seq->tasks, task, seq_link);
+	*pseq = seq;
+
+	return 0;
+}
+
+int
 spdk_accel_append_fill(struct spdk_accel_sequence **pseq, struct spdk_io_channel *ch,
 		       void *buf, uint64_t len,
 		       struct spdk_memory_domain *domain, void *domain_ctx, uint8_t pattern,
