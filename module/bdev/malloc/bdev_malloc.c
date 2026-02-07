@@ -463,6 +463,57 @@ bdev_malloc_writev(struct malloc_disk *mdisk, struct spdk_io_channel *ch,
 	}
 }
 
+static void
+bdev_malloc_comparev(struct malloc_disk *mdisk, struct spdk_io_channel *ch,
+		     struct malloc_task *task, struct spdk_bdev_io *bdev_io)
+{
+	uint64_t len, offset;
+	int res = 0;
+
+	len = bdev_io->u.bdev.num_blocks * bdev_io->bdev->blocklen;
+	offset = bdev_io->u.bdev.offset_blocks * bdev_io->bdev->blocklen;
+
+	if (bdev_malloc_check_iov_len(bdev_io->u.bdev.iovs, bdev_io->u.bdev.iovcnt, len)) {
+		spdk_bdev_io_complete(spdk_bdev_io_from_ctx(task),
+				      SPDK_BDEV_IO_STATUS_FAILED);
+		return;
+	}
+
+	task->status = SPDK_BDEV_IO_STATUS_SUCCESS;
+	task->num_outstanding = 0;
+	task->iov.iov_base = mdisk->malloc_buf + offset;
+	task->iov.iov_len = len;
+
+	SPDK_DEBUGLOG(bdev_malloc, "compare %zu bytes to offset %#" PRIx64 ", iovcnt=%d\n",
+		      len, offset, bdev_io->u.bdev.iovcnt);
+
+	task->num_outstanding++;
+	res = spdk_accel_append_compare(&bdev_io->u.bdev.accel_sequence, ch, bdev_io->u.bdev.iovs,
+					bdev_io->u.bdev.iovcnt,	bdev_io->u.bdev.memory_domain, bdev_io->u.bdev.memory_domain_ctx,
+					&task->iov, 1, NULL, NULL, NULL, NULL);
+
+	if (spdk_unlikely(res != 0)) {
+		malloc_sequence_fail(task, res);
+		return;
+	}
+
+	spdk_accel_sequence_finish(bdev_io->u.bdev.accel_sequence, malloc_sequence_done, task);
+
+	if (bdev_io->u.bdev.md_buf == NULL) {
+		return;
+	}
+
+	SPDK_DEBUGLOG(bdev_malloc, "compare metadata %zu bytes to offset %#" PRIx64 "\n",
+		      malloc_get_md_len(bdev_io), malloc_get_md_offset(bdev_io));
+
+	task->num_outstanding++;
+	res = spdk_accel_submit_compare(ch, malloc_get_md_buf(bdev_io), bdev_io->u.bdev.md_buf,
+					malloc_get_md_len(bdev_io), malloc_done, task);
+	if (res != 0) {
+		malloc_done(task, res);
+	}
+}
+
 static int
 bdev_malloc_unmap(struct malloc_disk *mdisk,
 		  struct spdk_io_channel *ch,
@@ -584,6 +635,9 @@ _bdev_malloc_submit_request(struct malloc_channel *mch, struct spdk_bdev_io *bde
 	case SPDK_BDEV_IO_TYPE_ABORT:
 		malloc_complete_task(task, mch, SPDK_BDEV_IO_STATUS_FAILED);
 		return 0;
+	case SPDK_BDEV_IO_TYPE_COMPARE:
+		bdev_malloc_comparev(disk, mch->accel_channel, task, bdev_io);
+		return 0;
 	case SPDK_BDEV_IO_TYPE_COPY:
 		bdev_malloc_copy(disk, mch->accel_channel, task,
 				 bdev_io->u.bdev.offset_blocks * block_size,
@@ -620,6 +674,7 @@ bdev_malloc_io_type_supported(void *ctx, enum spdk_bdev_io_type io_type)
 	case SPDK_BDEV_IO_TYPE_WRITE_ZEROES:
 	case SPDK_BDEV_IO_TYPE_ZCOPY:
 	case SPDK_BDEV_IO_TYPE_ABORT:
+	case SPDK_BDEV_IO_TYPE_COMPARE:
 	case SPDK_BDEV_IO_TYPE_COPY:
 		return true;
 
