@@ -75,7 +75,7 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
     types = {'spdk_json_decode_bool': 'boolean', 'spdk_json_decode_string': 'string',
              'spdk_json_decode_uint8': 'uint8', 'spdk_json_decode_uint16': 'uint16',
              'spdk_json_decode_int32': 'int32', 'spdk_json_decode_uint32': 'uint32',
-             'spdk_json_decode_uint64':'uint64', 'spdk_json_decode_uuid': 'string',
+             'spdk_json_decode_uint64':'uint64', 'spdk_json_decode_uuid': 'uuid',
              }
     for method in schema['methods']:
         decoder_name = schema_decoders.get(method['name'], f"rpc_{method['name']}_decoders")
@@ -128,7 +128,8 @@ def lint_c_code(schema: Dict[str, Any]) -> None:
 
 
 def lint_py_cli(schema: Dict[str, Any]) -> None:
-    types = {'string' : str, 'uint8': int, 'uint16': int, 'int32': int, 'uint32': int, 'uint64': int, 'boolean':bool, 'array': str.split}
+    types = {'string' : str, 'uint8': int, 'uint16': int, 'int32': int, 'uint32': int, 'uint64': int, 'boolean':bool,
+             'uuid' : str, 'array': str.split}
     exceptions = {'load_config', 'load_subsystem_config', 'save_config', 'save_subsystem_config'}
     _, subparsers = rpc.create_parser()
     schema_methods = set(method["name"] for method in schema['methods'])
@@ -233,7 +234,8 @@ def generate_rpcs(schema: Dict[str, Any]) -> str:
     types = {'string': 'char'.ljust(10)+'*', 'boolean': 'bool'.ljust(10),
              'uint8': 'uint8_t'.ljust(10), 'uint16': 'uint16_t'.ljust(10),
              'int32': 'int32_t'.ljust(10), 'uint32': 'uint32_t'.ljust(10),
-             'uint64': 'uint64_t'.ljust(10), 'array': '/* TODO: array type */ void	*' }
+             'uint64': 'uint64_t'.ljust(10), 'array': '/* TODO: array type */ void	*',
+             'uuid': 'struct'.ljust(10)+'spdk_uuid ' }
     env = Environment(loader=FileSystemLoader(base_dir / "include" / "spdk_internal"),
                       keep_trailing_newline=False)
     schema_template = env.get_template('rpc_autogen.h.jinja2')

@@ -129,7 +129,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "RFC 4122 UUID (e.g. \"ceccf520-691e-4b46-9546-34af789907c5\")"
         },
         {
@@ -1228,7 +1228,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of new bdev"
         },
         {
@@ -1308,7 +1308,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of new bdev"
         },
         {
@@ -1423,7 +1423,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of new bdev"
         },
         {
@@ -2234,7 +2234,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of new bdev"
         },
         {
@@ -2313,7 +2313,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of new bdev"
         }
       ]
@@ -2363,7 +2363,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID for this bdev"
         }
       ]
@@ -2489,7 +2489,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of restored bdev (not applicable when creating new instance)"
         },
         {
@@ -2616,7 +2616,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of new bdev"
         }
       ]
@@ -4940,7 +4940,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID for this RAID bdev"
         },
         {
@@ -5044,7 +5044,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of new bdev"
         }
       ]
@@ -5695,7 +5695,7 @@
         },
         {
           "name": "uuid",
-          "type": "string",
+          "type": "uuid",
           "description": "UUID of new bdev"
         },
         {
