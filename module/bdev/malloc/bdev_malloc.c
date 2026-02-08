@@ -198,6 +198,8 @@ malloc_done(void *ref, int status)
 			if (task->status == SPDK_BDEV_IO_STATUS_SUCCESS) {
 				task->status = SPDK_BDEV_IO_STATUS_NOMEM;
 			}
+		} else if (bdev_io->type == SPDK_BDEV_IO_TYPE_COMPARE && status == -EILSEQ) {
+			task->status = SPDK_BDEV_IO_STATUS_MISCOMPARE;
 		} else {
 			task->status = SPDK_BDEV_IO_STATUS_FAILED;
 		}
