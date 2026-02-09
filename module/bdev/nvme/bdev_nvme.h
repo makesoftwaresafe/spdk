@@ -153,7 +153,10 @@ struct nvme_bdev {
 	struct spdk_bdev			disk;
 	uint32_t				nsid;
 	struct nvme_bdev_ctrlr			*nbdev_ctrlr;
+
+	/* Used for namespace list, multipath settings and err stats protection. */
 	pthread_mutex_t				mutex;
+
 	int					ref;
 	enum spdk_bdev_nvme_multipath_policy	mp_policy;
 	enum spdk_bdev_nvme_multipath_selector	mp_selector;
