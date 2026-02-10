@@ -3039,8 +3039,9 @@ nvmf_ns_update_reservation_info(struct spdk_nvmf_ns *ns)
 	uint32_t i = 0;
 
 	assert(ns != NULL);
+	assert(ns->bdev);
 
-	if (!ns->bdev || !nvmf_ns_is_ptpl_capable(ns)) {
+	if (!nvmf_ns_is_ptpl_capable(ns)) {
 		return 0;
 	}
 
