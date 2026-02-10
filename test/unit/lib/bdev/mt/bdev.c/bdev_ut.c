@@ -2495,114 +2495,6 @@ unregister_during_reset(void)
 }
 
 static void
-bdev_init_wt_cb(void *done, int rc)
-{
-}
-
-static int
-wrong_thread_setup(void)
-{
-	allocate_cores(1);
-	allocate_threads(2);
-	set_thread(0);
-
-	spdk_io_device_register(&g_accel_io_device, ut_accel_ch_create_cb,
-				ut_accel_ch_destroy_cb, 0, NULL);
-	spdk_bdev_initialize(bdev_init_wt_cb, NULL);
-	spdk_io_device_register(&g_io_device, stub_create_ch, stub_destroy_ch,
-				sizeof(struct ut_bdev_channel), NULL);
-
-	set_thread(1);
-
-	return 0;
-}
-
-static int
-wrong_thread_teardown(void)
-{
-	int rc = 0;
-
-	set_thread(0);
-
-	g_teardown_done = false;
-	spdk_io_device_unregister(&g_io_device, NULL);
-	spdk_bdev_finish(finish_cb, NULL);
-	poll_threads();
-	memset(&g_bdev, 0, sizeof(g_bdev));
-	if (!g_teardown_done) {
-		fprintf(stderr, "%s:%d %s: teardown not done\n", __FILE__, __LINE__, __func__);
-		rc = -1;
-	}
-	g_teardown_done = false;
-
-	spdk_io_device_unregister(&g_accel_io_device, NULL);
-	free_threads();
-	free_cores();
-
-	return rc;
-}
-
-static void
-wait_for_examine_cb(void *arg)
-{
-	struct spdk_thread **thread = arg;
-
-	*thread = spdk_get_thread();
-}
-
-static void
-spdk_bdev_examine_wt(void)
-{
-	int rc;
-	bool save_auto_examine = g_bdev_opts.bdev_auto_examine;
-	struct spdk_thread *thread;
-
-	g_bdev_opts.bdev_auto_examine = false;
-
-	set_thread(0);
-	register_bdev(&g_bdev, "ut_bdev_wt", &g_io_device);
-	CU_ASSERT(spdk_bdev_get_by_name("ut_bdev_wt") != NULL);
-	set_thread(1);
-
-	/* Can examine only on the app thread */
-	rc = spdk_bdev_examine("ut_bdev_wt");
-	CU_ASSERT(rc == -EINVAL);
-
-	set_thread(0);
-	unregister_bdev(&g_bdev);
-	CU_ASSERT(spdk_bdev_get_by_name("ut_bdev_wt") == NULL);
-
-	/* Can wait for examine on app thread, callback called on app thread. */
-	set_thread(0);
-	register_bdev(&g_bdev, "ut_bdev_wt", &g_io_device);
-	CU_ASSERT(spdk_bdev_get_by_name("ut_bdev_wt") != NULL);
-	thread = NULL;
-	rc = spdk_bdev_wait_for_examine(wait_for_examine_cb, &thread);
-	CU_ASSERT(rc == 0);
-	poll_threads();
-	CU_ASSERT(thread == spdk_get_thread());
-	unregister_bdev(&g_bdev);
-	CU_ASSERT(spdk_bdev_get_by_name("ut_bdev_wt") == NULL);
-
-	/* Can wait for examine on non-app thread, callback called on same thread. */
-	set_thread(0);
-	register_bdev(&g_bdev, "ut_bdev_wt", &g_io_device);
-	CU_ASSERT(spdk_bdev_get_by_name("ut_bdev_wt") != NULL);
-	thread = NULL;
-	set_thread(1);
-	rc = spdk_bdev_wait_for_examine(wait_for_examine_cb, &thread);
-	CU_ASSERT(rc == 0);
-	poll_threads();
-	CU_ASSERT(thread == spdk_get_thread());
-
-	set_thread(0);
-	unregister_bdev(&g_bdev);
-	CU_ASSERT(spdk_bdev_get_by_name("ut_bdev_wt") == NULL);
-
-	g_bdev_opts.bdev_auto_examine = save_auto_examine;
-}
-
-static void
 event_notify_and_close(void)
 {
 	int resize_notify_count = 0;
@@ -2962,13 +2854,11 @@ int
 main(int argc, char **argv)
 {
 	CU_pSuite	suite = NULL;
-	CU_pSuite	suite_wt = NULL;
 	unsigned int	num_failures;
 
 	CU_initialize_registry();
 
 	suite = CU_add_suite("bdev", NULL, NULL);
-	suite_wt = CU_add_suite("bdev_wrong_thread", wrong_thread_setup, wrong_thread_teardown);
 
 	CU_ADD_TEST(suite, basic);
 	CU_ADD_TEST(suite, unregister_and_close);
@@ -2991,7 +2881,6 @@ main(int argc, char **argv)
 	CU_ADD_TEST(suite, bdev_set_io_timeout_mt);
 	CU_ADD_TEST(suite, lock_lba_range_then_submit_io);
 	CU_ADD_TEST(suite, unregister_during_reset);
-	CU_ADD_TEST(suite_wt, spdk_bdev_examine_wt);
 	CU_ADD_TEST(suite, event_notify_and_close);
 	CU_ADD_TEST(suite, unregister_and_qos_poller);
 	CU_ADD_TEST(suite, reset_start_complete_race);

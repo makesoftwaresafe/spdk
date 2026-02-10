@@ -833,13 +833,8 @@ spdk_bdev_examine(const char *name)
 {
 	struct spdk_bdev *bdev;
 	struct spdk_bdev_examine_item *item;
-	struct spdk_thread *thread = spdk_get_thread();
 
-	if (spdk_unlikely(!spdk_thread_is_app_thread(thread))) {
-		SPDK_ERRLOG("Cannot examine bdev %s on thread %p (%s)\n", name, thread,
-			    thread ? spdk_thread_get_name(thread) : "null");
-		return -EINVAL;
-	}
+	assert(spdk_thread_is_app_thread(NULL));
 
 	if (g_bdev_opts.bdev_auto_examine) {
 		SPDK_ERRLOG("Manual examine is not allowed if auto examine is enabled\n");
@@ -9304,14 +9299,9 @@ int
 spdk_bdev_register(struct spdk_bdev *bdev)
 {
 	struct spdk_bdev_desc *desc;
-	struct spdk_thread *thread = spdk_get_thread();
 	int rc;
 
-	if (spdk_unlikely(!spdk_thread_is_app_thread(NULL))) {
-		SPDK_ERRLOG("Cannot register bdev %s on thread %p (%s)\n", bdev->name, thread,
-			    thread ? spdk_thread_get_name(thread) : "null");
-		return -EINVAL;
-	}
+	assert(spdk_thread_is_app_thread(NULL));
 
 	rc = bdev_register(bdev);
 	if (rc != 0) {
