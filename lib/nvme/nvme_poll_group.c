@@ -15,6 +15,7 @@ spdk_nvme_poll_group_create(void *ctx, struct spdk_nvme_accel_fn_table *table)
 
 	group = calloc(1, sizeof(*group));
 	if (group == NULL) {
+		SPDK_ERRLOG("Failed to allocate poll group\n");
 		return NULL;
 	}
 
