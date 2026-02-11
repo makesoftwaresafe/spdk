@@ -1214,7 +1214,8 @@ function print_backtrace() {
 
 	printf -v bt_file '%02ubacktrace.%s' "$bt_counter" "$trace_name"
 	# We expect to get context of the failing code on stderr
-	_print_backtrace 2> "$output_dir/$bt_file.context" | tee "$output_dir/$bt_file"
+	_print_backtrace 2> "$output_dir/$bt_file.context" > "$output_dir/$bt_file"
+	((bt_counter == 0)) && print_context "$output_dir/$bt_file.context"
 	# Preserve test stack and timings for this instance - in case test fails these
 	# are not dumped to timing.txt.
 	if [[ -n $test_stack && -n $timing_stack ]]; then
@@ -1249,6 +1250,15 @@ function get_context() {
 		printf ' %s\n' "${context_post[@]}"
 	fi
 
+}
+
+function print_context() {
+	local context_file=$1 context
+	[[ -s $context_file ]] || return 0
+
+	printf '* Failing Code:\n\n'
+	mapfile -t context < "$context_file"
+	printf '  %s\n' "${context[@]}"
 }
 
 function _print_backtrace() {
@@ -1373,11 +1383,7 @@ function dump_backtrace() {
 		printf '* Cleanup Time: %us\n' $((dump_time - test_timing_dump))
 	fi
 	# Similarly to the above, print code context but only for the first backtrace instance.
-	if [[ -s ${contexts[0]} ]]; then
-		printf '* Failing Code:\n\n'
-		mapfile -t context < "${contexts[0]}"
-		printf '  %s\n' "${context[@]}"
-	fi
+	print_context "${contexts[0]}"
 	printf '\n\n'
 
 	local -A track_bt_bases=()
