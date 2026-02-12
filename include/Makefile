@@ -24,8 +24,10 @@ all: jsonrpc
 clean:
 	$(Q)rm -f $(SPDK_ROOT_DIR)/include/spdk_internal/rpc_autogen.h
 
-jsonrpc:
-	$(Q)$(SPDK_ROOT_DIR)/scripts/genrpc.py --schema $(SPDK_ROOT_DIR)/schema/schema.json --rpcs > $(SPDK_ROOT_DIR)/include/spdk_internal/rpc_autogen.h
+jsonrpc: $(SPDK_ROOT_DIR)/include/spdk_internal/rpc_autogen.h
+
+$(SPDK_ROOT_DIR)/include/spdk_internal/rpc_autogen.h: $(SPDK_ROOT_DIR)/scripts/genrpc.py $(SPDK_ROOT_DIR)/schema/schema.json $(SPDK_ROOT_DIR)/include/spdk_internal/rpc_autogen.h.jinja2
+	$(Q)$(SPDK_ROOT_DIR)/scripts/genrpc.py --schema $(SPDK_ROOT_DIR)/schema/schema.json --rpcs > $@
 
 install: $(INSTALLED_HEADERS)
 
