@@ -4,8 +4,9 @@
 
 import functools
 import sys
+from typing import Dict
 
-deprecated_aliases: dict[str, str] = {}
+deprecated_aliases: Dict[str, str] = {}
 
 
 def check_called_name(name):
