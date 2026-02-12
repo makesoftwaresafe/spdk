@@ -23,7 +23,8 @@ pkgdep_toolpath meson "${virtdir}/bin"
 
 # Additional dependencies for SPDK CLI
 apt-get install -y python3-configshell-fb python3-pexpect
-
+# Additional dependencies for code generation
+apt-get install -y python3-tabulate
 # Additional dependencies for DPDK
 apt-get install -y nasm libnuma-dev
 # Additional dependencies for ISA-L used in compression

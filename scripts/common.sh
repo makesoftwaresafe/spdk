@@ -551,6 +551,11 @@ if [[ -e "$CONFIG_WPDK_DIR/bin/wpdk_common.sh" ]]; then
 	source "$CONFIG_WPDK_DIR/bin/wpdk_common.sh"
 fi
 
+virtdir=${PIP_VIRTDIR:-/var/spdk/dependencies/pip}
+if [[ -e "$virtdir/bin/activate" ]]; then
+	source "$virtdir/bin/activate"
+fi > /dev/null
+
 # Make sure we have access to proper binaries installed in pkgdep/common.sh
 if [[ -e /etc/opt/spdk-pkgdep/paths/export.sh ]]; then
 	source /etc/opt/spdk-pkgdep/paths/export.sh
