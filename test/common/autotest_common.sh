@@ -1387,7 +1387,7 @@ function dump_backtrace() {
 	printf '\n\n'
 
 	local -A track_bt_bases=()
-	local bt_base
+	local bt_base bt_merged
 	for bt in "${!backtraces[@]}"; do
 		mapfile -t bt_map < "${backtraces[bt]}"
 		if [[ -z $BACKTRACE_INCLUDE_DUPLICATES ]]; then
@@ -1395,9 +1395,23 @@ function dump_backtrace() {
 			[[ -n ${track_bt_bases["$bt_base"]} ]] && continue
 			track_bt_bases["$bt_base"]=${backtraces[bt]}
 		fi
-		printf '@%s --\n' "${backtraces[bt]##*/}"
-		printf '  %s\n' "${bt_map[@]}"
-	done | grep -v "=========="
+		# Drop the header and the footer strings
+		bt_merged+=("${bt_map[@]:2:${#bt_map[@]}-3}")
+	done
+
+	# Reassemble individual traces and merge them together - this is done by joining
+	# all the columns from each line and sending all of them to column_backtrace()
+	# again (similarly to what print_backtrace() is doing).
+	local id=0 func_name func_args source source_line
+	while read -r _ func_name func_args source source_line; do
+		printf '[%u]@%s@%s@%s@%s\n' \
+			"$((++id))" \
+			"$func_name" \
+			"$func_args" \
+			"$source" \
+			"$source_line"
+	done < <(printf '%s\n' "${bt_merged[@]}") | column_backtrace \
+		-t -s "@" -N "id,func_name,func_args,source,source_line" -l5
 	printf '\n\n < %s\n\n' "$(underline "$(colorize orange "END BACKTRACE SUMMARY")")"
 
 	rm -f "${backtraces[@]}" "${stacks[@]}" "${contexts[@]}"
