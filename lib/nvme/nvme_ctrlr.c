@@ -3283,17 +3283,16 @@ nvme_ctrlr_update_namespaces(struct spdk_nvme_ctrlr_aer_completion *async_event)
 	free(async_event->log_page.changed_ns_list);
 }
 
-static int
-nvme_ctrlr_clear_changed_ns_log(struct spdk_nvme_ctrlr_aer_completion *async_event)
+static uint32_t *
+nvme_ctrlr_clear_changed_ns_log(struct spdk_nvme_ctrlr *ctrlr)
 {
-	struct spdk_nvme_ctrlr			*ctrlr = async_event->ctrlr;
 	struct nvme_completion_poll_status	*status;
-	int		rc = -ENOMEM;
+	int		rc;
 	uint32_t	*changed_ns_list;
 	size_t		changed_ns_list_length = SPDK_NVME_MAX_CHANGED_NAMESPACES * sizeof(uint32_t);
 
 	if (ctrlr->opts.disable_read_changed_ns_list_log_page) {
-		return 0;
+		return NULL;
 	}
 
 	changed_ns_list = calloc(1, changed_ns_list_length);
@@ -3332,12 +3331,11 @@ nvme_ctrlr_clear_changed_ns_log(struct spdk_nvme_ctrlr_aer_completion *async_eve
 		goto out;
 	}
 
-	async_event->log_page.changed_ns_list = changed_ns_list;
-	return 0;
+	return changed_ns_list;
 
 out:
 	free(changed_ns_list);
-	return rc;
+	return NULL;
 }
 
 static void
@@ -3352,12 +3350,14 @@ nvme_ctrlr_process_async_event(struct spdk_nvme_ctrlr_aer_completion *async_even
 
 	if ((event.bits.async_event_type == SPDK_NVME_ASYNC_EVENT_TYPE_NOTICE) &&
 	    (event.bits.async_event_info == SPDK_NVME_ASYNC_EVENT_NS_ATTR_CHANGED)) {
-		nvme_ctrlr_clear_changed_ns_log(async_event);
+		async_event->log_page.changed_ns_list = nvme_ctrlr_clear_changed_ns_log(ctrlr);
 
 		rc = nvme_ctrlr_identify_active_ns(ctrlr);
 		if (rc) {
+			free(async_event->log_page.changed_ns_list);
 			return;
 		}
+
 		nvme_ctrlr_update_namespaces(async_event);
 		nvme_io_msg_ctrlr_update(ctrlr);
 	}
