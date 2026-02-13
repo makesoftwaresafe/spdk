@@ -327,6 +327,12 @@ vbdev_passthru_submit_request(struct spdk_io_channel *ch, struct spdk_bdev_io *b
 		rc = spdk_bdev_abort(pt_node->base_desc, pt_ch->base_ch, bdev_io->u.abort.bio_to_abort,
 				     _pt_complete_io, bdev_io);
 		break;
+	case SPDK_BDEV_IO_TYPE_COMPARE:
+		rc = spdk_bdev_comparev_blocks(pt_node->base_desc, pt_ch->base_ch, bdev_io->u.bdev.iovs,
+					       bdev_io->u.bdev.iovcnt, bdev_io->u.bdev.offset_blocks,
+					       bdev_io->u.bdev.num_blocks,
+					       _pt_complete_io, bdev_io);
+		break;
 	case SPDK_BDEV_IO_TYPE_COPY:
 		rc = spdk_bdev_copy_blocks(pt_node->base_desc, pt_ch->base_ch,
 					   bdev_io->u.bdev.offset_blocks,
