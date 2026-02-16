@@ -9,13 +9,7 @@ pacman -Sy --needed --noconfirm gcc make cunit libaio openssl \
 # Additional dependencies for SPDK CLI
 pacman -Sy --needed --noconfirm python-pexpect python-pip libffi
 
-# per PEP668 work inside virtual env
-virtdir=${PIP_VIRTDIR:-/var/spdk/dependencies/pip}
-python3 -m venv --system-site-packages "$virtdir"
-source "$virtdir/bin/activate"
-python -m pip install -U "pip<26" setuptools wheel pip-tools
-pip-compile --extra dev --strip-extras -o "$rootdir/scripts/pkgdep/requirements.txt" "${rootdir}/python/pyproject.toml"
-pip install -r "$rootdir/scripts/pkgdep/requirements.txt"
+pkgdep_setup_python_venv "$rootdir"
 
 # Additional dependencies for DPDK
 pacman -Sy --needed --noconfirm numactl nasm

@@ -16,16 +16,7 @@ if [[ ${VERSION_ID:0:2} -le "15" ]]; then
 	update-alternatives --set python3 /usr/bin/python3.11
 fi
 
-# per PEP668 work inside virtual env
-virtdir=${PIP_VIRTDIR:-/var/spdk/dependencies/pip}
-python3 -m venv --system-site-packages "$virtdir"
-source "$virtdir/bin/activate"
-python -m pip install -U "pip<26" setuptools wheel pip-tools
-pip-compile --extra dev --strip-extras -o "$rootdir/scripts/pkgdep/requirements.txt" "${rootdir}/python/pyproject.toml"
-pip3 install -r "$rootdir/scripts/pkgdep/requirements.txt"
-
-# Fixes issue: #3721
-pkgdep_toolpath meson "${virtdir}/bin"
+pkgdep_setup_python_venv "$rootdir"
 
 # Additional dependencies for DPDK
 zypper install -y libnuma-devel nasm

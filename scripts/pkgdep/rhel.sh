@@ -125,16 +125,7 @@ else
 	yum install -y python python3-devel
 fi
 
-# per PEP668 work inside virtual env
-virtdir=${PIP_VIRTDIR:-/var/spdk/dependencies/pip}
-python3 -m venv --system-site-packages "$virtdir"
-source "$virtdir/bin/activate"
-python -m pip install -U "pip<26" setuptools wheel pip-tools
-pip-compile --extra dev --strip-extras -o "$rootdir/scripts/pkgdep/requirements.txt" "${rootdir}/python/pyproject.toml"
-python -m pip install -r "$rootdir/scripts/pkgdep/requirements.txt"
-
-# Fixes issue: #3721
-pkgdep_toolpath meson "${virtdir}/bin"
+pkgdep_setup_python_venv "$rootdir"
 
 # Additional dependencies for SPDK CLI
 yum install -y python3-configshell python3-pexpect
