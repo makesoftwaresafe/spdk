@@ -8,6 +8,14 @@
 zypper install -y gcc gcc-c++ make cunit-devel libaio-devel libopenssl-devel \
 	libuuid-devel python3-base ncurses-devel libjson-c-devel libcmocka-devel \
 	ninja meson python3-devel python3-pyelftools fuse3-devel unzip
+
+# use python3.11 for SLES <= 15 that ships with python3.6
+if [[ ${VERSION_ID:0:2} -le "15" ]]; then
+	zypper install -y python311-base python311-devel python311-Jinja2 python311-tabulate python311-pyelftools
+	update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+	update-alternatives --set python3 /usr/bin/python3.11
+fi
+
 # Additional dependencies for DPDK
 zypper install -y libnuma-devel nasm
 # Additional dependencies for ISA-L used in compression

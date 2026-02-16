@@ -10,6 +10,13 @@ apt-get install -y gcc g++ make libcunit1-dev libaio-dev libssl-dev libjson-c-de
 	libkeyutils-dev libncurses5-dev libncursesw5-dev python3 python3-pip python3-dev unzip libfuse3-dev patchelf \
 	curl procps pkgconf python3-venv
 
+# use python3.9 for Ubuntu <= 20.04 that ships with python3.8
+if [[ $ID == "ubuntu" && ${VERSION_ID:0:2} -le "20" ]]; then
+	apt-get install -y python3.9 python3.9-venv python3-pip python3.9-dev
+	update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
+	update-alternatives --set python3 /usr/bin/python3.9
+fi
+
 # per PEP668 work inside virtual env
 virtdir=${PIP_VIRTDIR:-/var/spdk/dependencies/pip}
 python3 -m venv --system-site-packages "$virtdir"
