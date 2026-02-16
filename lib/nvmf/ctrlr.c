@@ -2934,21 +2934,21 @@ nvmf_ctrlr_get_log_page(struct spdk_nvmf_request *req)
 
 	if (req->iovcnt < 1) {
 		SPDK_DEBUGLOG(nvmf, "get log command with no buffer\n");
-		goto invalid_field_log_page;
+		goto invalid_field;
 	}
 
 	if (is_log_page_ctrlr_nvm_scope(lid) &&
 	    ((cmd->nsid != 0) && (cmd->nsid != SPDK_NVME_GLOBAL_NS_TAG))) {
 		SPDK_ERRLOG("Invalid NSID: %u for log pages with a scope of NVM subsystem or controller: LID=0x%02X\n",
 			    cmd->nsid, lid);
-		goto invalid_field_log_page;
+		goto invalid_field;
 	}
 
 
 	offset = (uint64_t)cmd->cdw12 | ((uint64_t)cmd->cdw13 << 32);
 	if (offset & 3) {
 		SPDK_ERRLOG("Invalid log page offset 0x%" PRIx64 ", Offset must be 4-byte aligned\n", offset);
-		goto invalid_field_log_page;
+		goto invalid_field;
 	}
 
 	rae = cmd->cdw10_bits.get_log_page.rae;
@@ -2958,7 +2958,7 @@ nvmf_ctrlr_get_log_page(struct spdk_nvmf_request *req)
 	if (len > req->length) {
 		SPDK_ERRLOG("Get log page: len (%" PRIu64 ") > buf size (%u)\n",
 			    len, req->length);
-		goto invalid_field_log_page;
+		goto invalid_field;
 	}
 
 	lid = cmd->cdw10_bits.get_log_page.lid;
@@ -2986,11 +2986,11 @@ nvmf_ctrlr_get_log_page(struct spdk_nvmf_request *req)
 			break;
 		default:
 			SPDK_INFOLOG(nvmf, "Unsupported Get Log Page Identifier for discovery subsystem 0x%02X\n", lid);
-			goto invalid_field_log_page;
+			goto invalid_log_page;
 		}
 
 		if (rc) {
-			goto invalid_field_log_page;
+			goto invalid_field;
 		}
 		return SPDK_NVMF_REQUEST_EXEC_STATUS_COMPLETE;
 	}
@@ -3016,7 +3016,7 @@ nvmf_ctrlr_get_log_page(struct spdk_nvmf_request *req)
 			break;
 		} else {
 			SPDK_INFOLOG(nvmf, "Get Log Page for Asymmetric Namespace Access is not supported\n");
-			goto invalid_field_log_page;
+			goto invalid_log_page;
 		}
 	case SPDK_NVME_LOG_COMMAND_EFFECTS_LOG:
 		rc = nvmf_get_cmds_and_effects_log_page(ctrlr, req->iov, req->iovcnt, offset, len);
@@ -3035,16 +3035,20 @@ nvmf_ctrlr_get_log_page(struct spdk_nvmf_request *req)
 		return SPDK_NVMF_REQUEST_EXEC_STATUS_COMPLETE;
 	default:
 		SPDK_INFOLOG(nvmf, "Unsupported Get Log Page Identifier 0x%02X\n", lid);
-		goto invalid_field_log_page;
+		goto invalid_log_page;
 	}
 
 	if (!rc) {
 		return SPDK_NVMF_REQUEST_EXEC_STATUS_COMPLETE;
 	}
 
-invalid_field_log_page:
+invalid_field:
 	response->status.sct = SPDK_NVME_SCT_GENERIC;
 	response->status.sc = SPDK_NVME_SC_INVALID_FIELD;
+	return SPDK_NVMF_REQUEST_EXEC_STATUS_COMPLETE;
+invalid_log_page:
+	response->status.sct = SPDK_NVME_SCT_COMMAND_SPECIFIC;
+	response->status.sc = SPDK_NVME_SC_INVALID_LOG_PAGE;
 	return SPDK_NVMF_REQUEST_EXEC_STATUS_COMPLETE;
 }
 
