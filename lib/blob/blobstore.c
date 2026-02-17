@@ -5009,6 +5009,11 @@ bs_load_super_cpl(spdk_bs_sequence_t *seq, void *cb_arg, int bserrno)
 	struct spdk_bs_load_ctx *ctx = cb_arg;
 	int rc;
 
+	if (bserrno != 0) {
+		bs_load_ctx_fail(ctx, bserrno);
+		return;
+	}
+
 	rc = bs_super_validate(ctx->super, ctx->bs);
 	if (rc != 0) {
 		bs_load_ctx_fail(ctx, rc);
