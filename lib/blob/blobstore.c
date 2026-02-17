@@ -5430,11 +5430,16 @@ bs_dump_super_cpl(spdk_bs_sequence_t *seq, void *cb_arg, int bserrno)
 	struct spdk_bs_load_ctx *ctx = cb_arg;
 	int rc;
 
+	if (bserrno != 0) {
+		bs_dump_finish(seq, ctx, bserrno);
+		return;
+	}
+
 	fprintf(ctx->fp, "Signature: \"%.8s\" ", ctx->super->signature);
 	if (memcmp(ctx->super->signature, SPDK_BS_SUPER_BLOCK_SIG,
 		   sizeof(ctx->super->signature)) != 0) {
 		fprintf(ctx->fp, "(Mismatch)\n");
-		bs_dump_finish(seq, ctx, bserrno);
+		bs_dump_finish(seq, ctx, -EILSEQ);
 		return;
 	} else {
 		fprintf(ctx->fp, "(OK)\n");
