@@ -41,12 +41,16 @@ if [[ $INSTALL_DOCS == "true" ]]; then
 	[[ $VERSION != "16.0" ]] && zypper install -y mscgen
 fi
 if [[ $INSTALL_DAOS == "true" ]]; then
-	if ! zypper lr daos_packages &> /dev/null; then
-		zypper ar https://packages.daos.io/v2.0/Leap15/packages/x86_64/ daos_packages
+	if [[ $VERSION_ID == "15"* ]]; then
+		if ! zypper lr daos_packages &> /dev/null; then
+			zypper ar https://packages.daos.io/v2.0/Leap15/packages/x86_64/ daos_packages
+		fi
+		rpm --import https://packages.daos.io/RPM-GPG-KEY
+		zypper --non-interactive refresh
+		zypper install -y daos-client daos-devel
+	else
+		echo "Warning: DAOS packages are only available for SLES 15.x. Skipping DAOS installation."
 	fi
-	rpm --import https://packages.daos.io/RPM-GPG-KEY
-	zypper --non-interactive refresh
-	zypper install -y daos-client daos-devel
 fi
 if [[ $INSTALL_AVAHI == "true" ]]; then
 	# Additional dependencies for Avahi
