@@ -390,6 +390,26 @@ nvme_rdma_finish_data_transfer(struct spdk_nvme_rdma_req *rdma_req, int rc)
 	cb(rdma_req->transfer_cpl_cb_arg, rc);
 }
 
+static inline void
+nvme_rdma_qpair_remove_req(struct nvme_rdma_qpair *rqpair,
+			   struct spdk_nvme_rdma_req *rdma_req)
+{
+	assert(rqpair->qpair.queue_depth > 0);
+	rqpair->qpair.queue_depth--;
+	assert(rqpair->num_outstanding_reqs > 0);
+	rqpair->num_outstanding_reqs--;
+	TAILQ_REMOVE(&rqpair->outstanding_reqs, rdma_req, link);
+}
+
+static inline void
+nvme_rdma_qpair_add_req(struct nvme_rdma_qpair *rqpair,
+			struct spdk_nvme_rdma_req *rdma_req)
+{
+	rqpair->qpair.queue_depth++;
+	TAILQ_INSERT_TAIL(&rqpair->outstanding_reqs, rdma_req, link);
+	rqpair->num_outstanding_reqs++;
+}
+
 static void
 nvme_rdma_req_complete(struct spdk_nvme_rdma_req *rdma_req,
 		       struct spdk_nvme_cpl *rsp,
@@ -416,10 +436,7 @@ nvme_rdma_req_complete(struct spdk_nvme_rdma_req *rdma_req,
 		spdk_nvme_qpair_print_completion(qpair, rsp);
 	}
 
-	assert(rqpair->num_outstanding_reqs > 0);
-	rqpair->num_outstanding_reqs--;
-
-	TAILQ_REMOVE(&rqpair->outstanding_reqs, rdma_req, link);
+	nvme_rdma_qpair_remove_req(rqpair, rdma_req);
 
 	nvme_complete_request(req->cb_fn, req->cb_arg, qpair, req, rsp);
 	nvme_rdma_req_put(rqpair, rdma_req);
@@ -1907,8 +1924,7 @@ nvme_rdma_apply_accel_sequence(struct nvme_rdma_qpair *rqpair, struct nvme_reque
 	}
 
 	rdma_req->in_progress_accel = 1;
-	TAILQ_INSERT_TAIL(&rqpair->outstanding_reqs, rdma_req, link);
-	rqpair->num_outstanding_reqs++;
+	nvme_rdma_qpair_add_req(rqpair, rdma_req);
 	rqpair->num_active_accel_reqs++;
 
 	NVME_RQPAIR_DEBUGLOG(rqpair, "req %p, finish accel seq %p\n", rdma_req, accel_seq);
@@ -2627,8 +2643,7 @@ nvme_rdma_qpair_submit_request(struct spdk_nvme_qpair *qpair,
 		return -1;
 	}
 
-	TAILQ_INSERT_TAIL(&rqpair->outstanding_reqs, rdma_req, link);
-	rqpair->num_outstanding_reqs++;
+	nvme_rdma_qpair_add_req(rqpair, rdma_req);
 
 	return _nvme_rdma_qpair_submit_request(rqpair, rdma_req);
 }
