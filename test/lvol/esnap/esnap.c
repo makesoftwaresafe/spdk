@@ -20,13 +20,6 @@
 
 #include "unit/lib/json_mock.c"
 
-#ifdef SPDK_CONFIG_PMDK
-DEFINE_STUB(pmem_msync, int, (const void *addr, size_t len), 0);
-DEFINE_STUB(pmem_memcpy_persist, void *, (void *pmemdest, const void *src, size_t len), NULL);
-DEFINE_STUB(pmem_is_pmem, int, (const void *addr, size_t len), 0);
-DEFINE_STUB(pmem_memset_persist, void *, (void *pmemdest, int c, size_t len), NULL);
-#endif
-
 char g_testdir[PATH_MAX];
 
 static void
