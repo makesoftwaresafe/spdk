@@ -88,7 +88,7 @@ cl() {
 }
 
 %if %{deps}
-_PKGDEP_OPTS="--docs --pmem --rdma --uring"
+_PKGDEP_OPTS="--docs --rdma --uring"
 %if %{rbd}
 _PKGDEP_OPTS="$_PKGDEP_OPTS --rbd"
 %endif
