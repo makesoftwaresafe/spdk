@@ -1581,7 +1581,7 @@ nvme_complete_request(spdk_nvme_cmd_cb cb_fn, void *cb_arg, struct spdk_nvme_qpa
 	struct nvme_error_cmd           *cmd;
 
 	if (spdk_unlikely(qpair->collect_stats)) {
-		spdk_nvme_qpair_io_stats_update(&qpair->io_stats, &req->cmd, req->payload_size);
+		spdk_nvme_qpair_io_stats_update(&qpair->io_stats, &req->cmd, req->payload.payload_size);
 	}
 
 	if (spdk_unlikely(req->accel_sequence != NULL)) {
