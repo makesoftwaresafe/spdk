@@ -3971,6 +3971,10 @@ nvmf_process_ib_event(struct spdk_nvmf_rdma_device *device)
 			    ibv_event_type_str(event.event_type), ibv_get_device_name(device->context->device), device);
 		device->need_destroy = true;
 		break;
+	case IBV_EVENT_GID_CHANGE:
+		SPDK_INFOLOG(rdma, "Async event: %s\n", ibv_event_type_str(event.event_type));
+		spdk_trace_record(TRACE_RDMA_IBV_ASYNC_EVENT, 0, 0, 0, event.event_type);
+		break;
 	case IBV_EVENT_CQ_ERR:
 	case IBV_EVENT_PORT_ACTIVE:
 	case IBV_EVENT_PORT_ERR:
@@ -3980,7 +3984,6 @@ nvmf_process_ib_event(struct spdk_nvmf_rdma_device *device)
 	case IBV_EVENT_SRQ_ERR:
 	case IBV_EVENT_SRQ_LIMIT_REACHED:
 	case IBV_EVENT_CLIENT_REREGISTER:
-	case IBV_EVENT_GID_CHANGE:
 	case IBV_EVENT_SQ_DRAINED:
 	default:
 		SPDK_NOTICELOG("Async event: %s\n",
