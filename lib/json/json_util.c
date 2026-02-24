@@ -148,11 +148,9 @@ json_number_split(const struct spdk_json_val *val, struct spdk_json_num *num)
 			assert(state == NUM_STATE_EXP);
 			/* exp_negative = false; */ /* already false by default */
 		} else {
-			uint64_t new_val;
-
 			assert(c >= '0' && c <= '9');
-			new_val = *pval * 10 + c - '0';
-			if (new_val < *pval) {
+			/* Check if adding the current digit would overflow */
+			if (*pval > ((UINT64_MAX - (c - '0')) / 10)) {
 				return -ERANGE;
 			}
 
@@ -160,7 +158,7 @@ json_number_split(const struct spdk_json_val *val, struct spdk_json_num *num)
 				frac_digits++;
 			}
 
-			*pval = new_val;
+			*pval = *pval * 10 + c - '0';
 		}
 	}
 
@@ -185,13 +183,11 @@ json_number_split(const struct spdk_json_val *val, struct spdk_json_num *num)
 		}
 	} else { /* positive exponent */
 		while (num->exponent) {
-			uint64_t new_val = num->significand * 10;
-
-			if (new_val < num->significand) {
+			if (num->significand > (UINT64_MAX / 10)) {
 				break;
 			}
 
-			num->significand = new_val;
+			num->significand *= 10;
 			num->exponent--;
 		}
 	}
