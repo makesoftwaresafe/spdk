@@ -3116,7 +3116,7 @@ exit:
 }
 
 static int
-nvmf_ns_update_reservation_info(struct spdk_nvmf_ns *ns)
+nvmf_ns_reservation_ptpl_update(struct spdk_nvmf_ns *ns)
 {
 	struct spdk_nvmf_reservation_info info;
 	struct spdk_nvmf_registrant *reg, *tmp;
@@ -3124,10 +3124,6 @@ nvmf_ns_update_reservation_info(struct spdk_nvmf_ns *ns)
 
 	assert(ns != NULL);
 	assert(ns->bdev);
-
-	if (!nvmf_ns_is_ptpl_capable(ns)) {
-		return 0;
-	}
 
 	memset(&info, 0, sizeof(info));
 	spdk_uuid_fmt_lower(info.bdev_uuid, sizeof(info.bdev_uuid), spdk_bdev_get_uuid(ns->bdev));
@@ -4188,8 +4184,10 @@ nvmf_ns_reservation_update_state(struct spdk_nvmf_ns *ns,
 
 	/* update reservation information to subsystem's poll group */
 	if (update_sgroup) {
-		if (ns->ptpl_activated || opc == SPDK_NVME_OPC_RESERVATION_REGISTER) {
-			if (nvmf_ns_update_reservation_info(ns) != 0) {
+		/* update PTPL if activated or if registration command disabled PTPL */
+		if (nvmf_ns_is_ptpl_capable(ns) &&
+		    (ns->ptpl_activated || opc == SPDK_NVME_OPC_RESERVATION_REGISTER)) {
+			if (nvmf_ns_reservation_ptpl_update(ns) != 0) {
 				req->rsp->nvme_cpl.status.sc = SPDK_NVME_SC_INTERNAL_DEVICE_ERROR;
 			}
 		}
