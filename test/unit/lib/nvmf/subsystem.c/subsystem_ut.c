@@ -1150,7 +1150,7 @@ test_reservation_register_with_ptpl(void)
 	SPDK_CU_ASSERT_FATAL(!spdk_uuid_compare(&g_ctrlr1_A.hostid, &reg->hostid));
 	/* Load reservation information from configuration file */
 	memset(&info, 0, sizeof(info));
-	rc = nvmf_ns_reservation_load(&g_ns, &info);
+	rc = nvmf_ns_reservation_ptpl_load(&g_ns, &info);
 	SPDK_CU_ASSERT_FATAL(rc == 0);
 	SPDK_CU_ASSERT_FATAL(info.ptpl_activated == true);
 
@@ -1164,7 +1164,7 @@ test_reservation_register_with_ptpl(void)
 	SPDK_CU_ASSERT_FATAL(g_ns.ptpl_activated == false);
 	rc = nvmf_ns_reservation_ptpl_update(&g_ns);
 	SPDK_CU_ASSERT_FATAL(rc == 0);
-	rc = nvmf_ns_reservation_load(&g_ns, &info);
+	rc = nvmf_ns_reservation_ptpl_load(&g_ns, &info);
 	SPDK_CU_ASSERT_FATAL(rc < 0);
 	unlink(g_ns.ptpl_file);
 
@@ -1736,7 +1736,7 @@ test_reservation_acquire_release_with_ptpl(void)
 	SPDK_CU_ASSERT_FATAL(!spdk_uuid_compare(&g_ctrlr1_A.hostid, &reg->hostid));
 	/* Load reservation information from configuration file */
 	memset(&info, 0, sizeof(info));
-	rc = nvmf_ns_reservation_load(&g_ns, &info);
+	rc = nvmf_ns_reservation_ptpl_load(&g_ns, &info);
 	SPDK_CU_ASSERT_FATAL(rc == 0);
 	SPDK_CU_ASSERT_FATAL(info.ptpl_activated == true);
 
@@ -1750,7 +1750,7 @@ test_reservation_acquire_release_with_ptpl(void)
 	rc = nvmf_ns_reservation_ptpl_update(&g_ns);
 	SPDK_CU_ASSERT_FATAL(rc == 0);
 	memset(&info, 0, sizeof(info));
-	rc = nvmf_ns_reservation_load(&g_ns, &info);
+	rc = nvmf_ns_reservation_ptpl_load(&g_ns, &info);
 	SPDK_CU_ASSERT_FATAL(rc == 0);
 	SPDK_CU_ASSERT_FATAL(info.ptpl_activated == true);
 	SPDK_CU_ASSERT_FATAL(info.rtype == SPDK_NVME_RESERVE_WRITE_EXCLUSIVE_REG_ONLY);
@@ -1768,7 +1768,7 @@ test_reservation_acquire_release_with_ptpl(void)
 	rc = nvmf_ns_reservation_ptpl_update(&g_ns);
 	SPDK_CU_ASSERT_FATAL(rc == 0);
 	memset(&info, 0, sizeof(info));
-	rc = nvmf_ns_reservation_load(&g_ns, &info);
+	rc = nvmf_ns_reservation_ptpl_load(&g_ns, &info);
 	SPDK_CU_ASSERT_FATAL(rc == 0);
 	SPDK_CU_ASSERT_FATAL(info.rtype == 0);
 	SPDK_CU_ASSERT_FATAL(info.crkey == 0);
@@ -3649,7 +3649,7 @@ test_nvmf_ns_reservation_add_max_registrants(void)
 	rc = nvmf_ns_reservation_ptpl_update(&g_ns);
 	CU_ASSERT(rc == 0);
 	/* Validate that info is capped at max */
-	rc = nvmf_ns_reservation_load(&g_ns, &info);
+	rc = nvmf_ns_reservation_ptpl_load(&g_ns, &info);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT_EQUAL(info.num_regs, SPDK_NVMF_MAX_NUM_REGISTRANTS);
 	/* Clear should return max */

@@ -2283,10 +2283,10 @@ static struct spdk_bdev_module ns_bdev_module = {
 	.name	= "NVMe-oF Target",
 };
 
-static int nvmf_ns_reservation_update(const struct spdk_nvmf_ns *ns,
-				      const struct spdk_nvmf_reservation_info *info);
-static int nvmf_ns_reservation_load(const struct spdk_nvmf_ns *ns,
-				    struct spdk_nvmf_reservation_info *info);
+static int nvmf_ns_reservation_ptpl_store(const struct spdk_nvmf_ns *ns,
+		const struct spdk_nvmf_reservation_info *info);
+static int nvmf_ns_reservation_ptpl_load(const struct spdk_nvmf_ns *ns,
+		struct spdk_nvmf_reservation_info *info);
 static int nvmf_ns_reservation_restore(struct spdk_nvmf_ns *ns,
 				       struct spdk_nvmf_reservation_info *info);
 
@@ -2494,7 +2494,7 @@ spdk_nvmf_subsystem_add_ns_ext(struct spdk_nvmf_subsystem *subsystem, const char
 	}
 
 	if (nvmf_ns_is_ptpl_capable(ns)) {
-		rc = nvmf_ns_reservation_load(ns, &info);
+		rc = nvmf_ns_reservation_ptpl_load(ns, &info);
 		if (rc) {
 			SPDK_ERRLOG("Subsystem load reservation failed\n");
 			goto err;
@@ -3155,7 +3155,7 @@ nvmf_ns_reservation_ptpl_update(struct spdk_nvmf_ns *ns)
 	info.num_regs = i;
 	info.ptpl_activated = ns->ptpl_activated;
 
-	return nvmf_ns_reservation_update(ns, &info);
+	return nvmf_ns_reservation_ptpl_store(ns, &info);
 }
 
 size_t
@@ -4262,14 +4262,15 @@ nvmf_ns_get_rescap(struct spdk_nvmf_ns *ns)
 }
 
 static int
-nvmf_ns_reservation_update(const struct spdk_nvmf_ns *ns,
-			   const struct spdk_nvmf_reservation_info *info)
+nvmf_ns_reservation_ptpl_store(const struct spdk_nvmf_ns *ns,
+			       const struct spdk_nvmf_reservation_info *info)
 {
 	return g_reservation_ops.update(ns, info);
 }
 
 static int
-nvmf_ns_reservation_load(const struct spdk_nvmf_ns *ns, struct spdk_nvmf_reservation_info *info)
+nvmf_ns_reservation_ptpl_load(const struct spdk_nvmf_ns *ns,
+			      struct spdk_nvmf_reservation_info *info)
 {
 	return g_reservation_ops.load(ns, info);
 }
